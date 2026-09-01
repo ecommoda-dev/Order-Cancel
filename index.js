@@ -1,8 +1,23 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.3.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.4.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v1.1.0 · html-builder v3.0.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.4.0:
+//   🔴 [إصلاح] "لسه قيد التأكيد" كانت بتظهر على إلغاء ناجح ١٠٠% تقريبًا في كل
+//       مرة. التحقق البعدي كان موجود من v2.0.0 بس **من غير أي انتظار**: بيقرا
+//       الأوردر تاني بعد أجزاء من الثانية من الميوتيشن، و orderCancel ميوتيشن
+//       غير متزامنة (بترجّع Job وشوبيفاي بتنفّذ بعدين) — فـ cancelledAt يبقى
+//       لسه null والأداة تقول "مش مؤكَّد" وهي مش عارفة.
+//       دلوقتي waitForCancelConfirmation بتستنى الـ Job نفسه (job(id){done})
+//       بـ backoff متصاعد 400→2200ms (≈٦ ثوانٍ بحد أقصى) وبتوقف أول ما
+//       cancelledAt يتأكد — مفيش نوم ثابت غير مشروط.
+//       ⚠️ الحالة الصفراء لسه ليها معنى: لو عدّت الـ٦ ثوانٍ من غير تأكيد،
+//       دي "ما قدرناش نتأكد" مش "تم" ومش "فشل" — والواجهة بتدي زرار تحقق يدوي.
+//   ⚪ [جديد] رد cancel_order بيشيل verify { jobDone, attempts, waitedMs }
+//       وبيتسجّل في extra في D1 — عشان لو الحالة الصفراء رجعت نبقى عارفين
+//       استنينا قد إيه وإن كان الـ Job خلص ولا لأ.
 //
 // CHANGELOG v2.3.0:
 //   🔴 [إصلاح] البحث برقم الأوردر الطويل (Order ID زي 7186861523266) كان
@@ -80,7 +95,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.3.0";
+const WORKER_VERSION = "2.4.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -500,6 +515,57 @@ async function cancelOrderInShopify(env, token, { orderId, notifyCustomer, resto
   return payload.job;
 }
 
+// ─── §CANCEL::waitForCancelConfirmation ───
+// orderCancel ميوتيشن **غير متزامنة**: شوبيفاي بترجّع Job وبتنفّذ الإلغاء بعدين.
+// النسخة القديمة كانت بتقرا الأوردر تاني **فورًا** (بعد أجزاء من الثانية) —
+// فـ cancelledAt يبقى لسه null دايمًا تقريبًا والأداة تقول "لسه قيد التأكيد"
+// على إلغاء ناجح ١٠٠%. التحقق كان موجود بس من غير صبر.
+//
+// الحل: نستنى الـ Job يخلص فعلاً بـ backoff متصاعد، وبعدين نقرا الأوردر.
+// مفيش نوم ثابت غير مشروط — الحلقة بتقف أول ما cancelledAt يتأكد.
+const CANCEL_VERIFY_DELAYS_MS = [400, 700, 1100, 1600, 2200];   // ≈ 6 ثوانٍ بحد أقصى
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// بترجّع true/false، أو null لو معرفناش (فشل الاستعلام نفسه) — والفرق مهم:
+// null معناها "كمّل واقرا الأوردر"، مش "الـ job لسه شغال".
+async function isJobDone(env, token, jobId) {
+  try {
+    const data = await shopifyGQL(
+      env, token,
+      `query JobStatus($id: ID!) { job(id: $id) { id done } }`,
+      { id: jobId }, "jobStatus"
+    );
+    const done = data?.data?.job?.done;
+    return typeof done === "boolean" ? done : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function waitForCancelConfirmation(env, token, orderId, jobId) {
+  let jobDone = null, waitedMs = 0, attempts = 0, order = null;
+
+  for (const delay of CANCEL_VERIFY_DELAYS_MS) {
+    await sleep(delay);
+    waitedMs += delay;
+    attempts++;
+
+    // لسه الـ job شغال؟ ماتضيّعش نداء على قراءة الأوردر
+    if (jobId && jobDone !== true) {
+      jobDone = await isJobDone(env, token, jobId);
+      if (jobDone === false) continue;
+    }
+
+    order = await getOrderById(env, token, orderId);
+    if (order?.cancelledAt) {
+      return { confirmed: true, jobDone: true, attempts, waitedMs, order };
+    }
+  }
+
+  return { confirmed: false, jobDone, attempts, waitedMs, order };
+}
+
 async function writeCancelReasonMetafield(env, token, orderId, reasonLabel) {
   const mutation = `mutation SetCancelReason($metafields: [MetafieldsSetInput!]!) {
     metafieldsSet(metafields: $metafields) {
@@ -636,15 +702,15 @@ async function handleCancelOrder(request, env) {
   const shopifyReason = SHOPIFY_CANCEL_REASON;
   const staffNote = `Cancelled from EcomModa Order Cancel Tool by ${employee}. Manual reason: ${reasonLabel}`.slice(0, 255);
 
-  let job = null, metafield = null, confirmed = false;
+  let job = null, metafield = null, confirmed = false, verify = null;
 
   try {
     job = await cancelOrderInShopify(env, token, { orderId, notifyCustomer, restock, shopifyReason, staffNote });
     metafield = await writeCancelReasonMetafield(env, token, orderId, reasonLabel);
 
-    // تحقق فعلي بعد التنفيذ — مش بس نشوف إن الـ job اتقبل
-    const verify = await getOrderById(env, token, orderId);
-    confirmed = !!verify?.cancelledAt;
+    // تحقق فعلي بعد التنفيذ — بانتظار الـ Job، مش قراءة فورية
+    verify = await waitForCancelConfirmation(env, token, orderId, job?.id);
+    confirmed = verify.confirmed;
 
     await writeLog(env.DB, {
       tool: TOOL_NAME, type: "cancel", employee,
@@ -656,6 +722,7 @@ async function handleCancelOrder(request, env) {
         warehouseNotified: !!warehouseNotified,
         fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
         job, metafield, confirmed,
+        verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
       },
     });
 
@@ -663,8 +730,10 @@ async function handleCancelOrder(request, env) {
       ok: true,
       message: confirmed
         ? `تم إلغاء الأوردر ${orderBefore.name} وتأكيده`
-        : `تم إرسال طلب إلغاء الأوردر ${orderBefore.name} — لسه قيد التأكيد من شوبيفاي`,
+        : `تم إرسال طلب إلغاء الأوردر ${orderBefore.name} — شوبيفاي ما أكّدتش الإلغاء خلال ` +
+          `${Math.round((verify?.waitedMs || 0) / 1000)} ثوانٍ. الإلغاء غالبًا هيكمل لوحده — اضغط "تحقق الآن"`,
       confirmed, order: orderBefore, job, metafield,
+      verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
     }, 200, request);
 
   } catch (err) {

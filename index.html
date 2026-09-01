@@ -363,6 +363,8 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>"لسه قيد التأكيد" كانت بتظهر على إلغاء ناجح</b> — الأداة كانت بتقرا الأوردر تاني فورًا بعد الإلغاء، و<code>orderCancel</code> ميوتيشن غير متزامنة. دلوقتي بتستنى الـ Job يخلص (≈٦ ثوانٍ بحد أقصى) قبل ما تحكم (Worker v2.4.0)</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>زرار <b>🔄 تحقق من شوبيفاي الآن</b> جوه البانر الأصفر — بيعيد قراءة الأوردر وبيحوّل البانر لأخضر لو الإلغاء اتأكد، من غير ما الموظف يفتح شوبيفاي</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>البحث بالـ Order ID الطويل (زي 7186861523266) بقى شغّال — قبل كده كان بيقول "لم يتم العثور على الأوردر" والرابط الكامل بس هو اللي بيشتغل (Worker v2.3.0)</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>شرط رابع للإلغاء: الأوردر لازم يكون <b>لم يتم شحنه</b> (UNFULFILLED) — الأوردر المشحون إلغاؤه بيتسجّل RTO مش إلغاء، وحالة الشحن بقت ظاهرة في الـ chips</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>لو الأوردر Confirmed أو Ready: نافذة التأكيد بتطلب إقرار "هل أبلغت مسئول الشحن/المخزن؟" وزرار التنفيذ مقفول من غيره</span></li>
@@ -456,6 +458,7 @@ body {
               <li><code>§TOOL-JS</code> — بحث الأوردر، عرض الأهلية، اختيار السبب، تأكيد الإلغاء، عرض النتيجة (3 حالات)</li>
               <li><code>renderOrderCard()</code> — بتحسب الأهلية من 5 شروط وبتبني الـ chips الأربعة. لو الـ Worker أقدم من v2.3.0 وما بعتش <code>canCancelByFulfillmentStatus</code>، بتحسبها محليًا من <code>displayFulfillmentStatus</code> بدل ما تفترض "مسموح"</li>
               <li><code>openCancelConfirm()</code> / <code>onWarehouseAckChange()</code> — إقرار إبلاغ الشحن/المخزن + قفل زرار التنفيذ</li>
+              <li><code>recheckCancelStatus()</code> — تحقق يدوي من البانر الأصفر عبر <code>lookup_order</code>، بيحوّله لأخضر لو <code>alreadyCancelled</code>. ما بيحوّلوش لأحمر أبدًا — الـ Job ممكن يكون لسه شغال</li>
             </ul>
 
             <h4>KEY VARIABLES</h4>
@@ -473,7 +476,7 @@ body {
             <ul>
               <li>مفيش Log Tab في النسخة دي — الـ Worker بيسجّل في D1 عادي (tool=order_cancel) وممكن يتراجع من أداة تانية أو مستقبلًا لو احتجنا تاب سجل هنا</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
-              <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها Shopify استلمت طلب الإلغاء لكن ما أكدتش cancelledAt فورًا — راجع الأوردر يدويًا لو استمرت الحالة دي</li>
+              <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها إن الـ Worker استنى الـ Job بتاع <code>orderCancel</code> لمدة ≈٦ ثوانٍ (backoff متصاعد 400→2200ms) و<code>cancelledAt</code> لسه ما اتسجّلش. دي <b>"ما قدرناش نتأكد"</b> — مش "تم" ومش "فشل". الـ Job بيكمل لوحده في الغالب، فالبانر فيه زرار <code>recheckCancelStatus()</code> بيعيد القراءة ويحوّله لأخضر لو اتأكد. لو فضلت صفرا بعد كذا محاولة، افتح الأوردر في شوبيفاي</li>
               <li>سطر الدولة (Egypt) متشال من عنوان الشحن عمدًا — كل الأوردرات محلية والسطر ما بيضيفش معلومة. لو اتفتح بيع دولي، السطر لازم يرجع</li>
               <li>الـ chips مبنية على 4 مصادر مختلفة: ميتافيلد <code>custom.manual_status</code> (S1) · <code>displayFinancialStatus</code> · <code>displayFulfillmentStatus</code> · مصفوفة <code>returns</code> — التلاتة الأخيرة من شوبيفاي مباشرة</li>
             </ul>
@@ -570,7 +573,7 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.1.0';
+const TOOL_VERSION = 'v1.2.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -1145,6 +1148,36 @@ function onWarehouseAckChange() {
   if (btn) btn.disabled = !document.getElementById('warehouseAckCheck').checked;
 }
 
+// ─── §TOOL-JS::recheckCancelStatus ───
+// الحالة الصفراء معناها إن شوبيفاي ما أكّدتش الإلغاء خلال مهلة انتظار الـ Worker
+// (≈ ٦ ثوانٍ). الـ Job بيكمل لوحده في الغالب، فبدل ما الموظف يفتح شوبيفاي
+// يتأكد بنفسه، الزرار ده بيعيد قراءة الأوردر وبيحوّل البانر لأخضر لو اتأكد.
+async function recheckCancelStatus() {
+  const btn = document.getElementById('recheckBtn');
+  const banner = document.getElementById('resultBanner');
+  if (!currentOrder || !banner) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ جارٍ التحقق...'; }
+
+  try {
+    const data = await apiGet('lookup_order', { order: currentOrder.numericId || currentOrder.name });
+    if (data.ok && data.order && data.order.alreadyCancelled) {
+      banner.className = 'result-banner success';
+      banner.innerHTML = `
+        <div class="result-title success">✓ تم إلغاء الأوردر وتأكيده</div>
+        <div>شوبيفاي أكّدت إلغاء الأوردر ${data.order.name}</div>`;
+      showToast('تم تأكيد الإلغاء ✓', 'success'); playBeep('success');
+      return;
+    }
+    // لسه مش متأكد — الحالة الصفراء بتفضل زي ما هي، مش بتتحوّل لفشل:
+    // الـ Job ممكن يكون لسه شغال فعلاً.
+    showToast('لسه مش مؤكَّد من شوبيفاي — جرّب تاني بعد شوية', 'neutral');
+  } catch (err) {
+    showToast(`تعذّر التحقق: ${err.message}`, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 تحقق من شوبيفاي الآن'; }
+  }
+}
+
 function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); }
 function closeConfirmOnBackdrop(e) { if (e.target === e.currentTarget) closeConfirm(); }
 
@@ -1169,10 +1202,15 @@ async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
     const titleMap = { success: '✓ تم إلغاء الأوردر وتأكيده', warning: '⚠ تم إرسال الإلغاء — لسه قيد التأكيد', error: '✗ فشل الإلغاء' };
 
     resultArea.innerHTML = `
-      <div class="result-banner ${status}">
+      <div class="result-banner ${status}" id="resultBanner">
         <div class="result-title ${status}">${titleMap[status]}</div>
         <div>${res.ok ? res.message : res.error}</div>
         ${res.ok ? `<div style="font-size:12px;color:var(--text-muted);">السبب المسجّل: ${reasonLabel}</div>` : ''}
+        ${status === 'warning' ? `
+          <div style="margin-top:6px;">
+            <button class="btn btn-outline" id="recheckBtn" style="padding:6px 14px;font-size:12px;"
+                    onclick="recheckCancelStatus()">🔄 تحقق من شوبيفاي الآن</button>
+          </div>` : ''}
       </div>
     `;
 
