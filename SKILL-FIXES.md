@@ -2,11 +2,15 @@
 
 # إصلاحات مطلوبة في المهارات — مستخرَجة من `Order-Cancel`
 
-![version](https://img.shields.io/badge/version-v1.0.0-blue)
+![version](https://img.shields.io/badge/version-v1.1.0-blue)
 
 الملف ده **مدخلات لجلسة تعديل مهارات**، مش توثيق للأداة. كل بند هنا طلع من
 شغل فعلي على `Order-Cancel` يوم 01-09-2026، ومعاه **دليل مقاس** مش رأي.
 
+> **الحالة:** ده البند الوحيد المفتوح على `Order-Cancel` (01-09-2026) — كل
+> باقي المسائل اتقفلت. البندان ٣ و٤ كانوا مسجّلين في `CLAUDE.md` لوحدهم
+> واتنقلوا هنا عشان مايتكرروش في مكانين.
+>
 > ⚠️ **اقرا `ecommoda-skill-versioning` قبل ما تنفّذ أي بند.** كل تعديل لازم
 > يطلع بـ bump في `SKILL.md` + بند مصنَّف في `references/CHANGELOG.md` بتاع
 > المهارة. تسليم من غير الاتنين = تسليم ناقص.
@@ -342,6 +346,6 @@ if (order.cancelledAt) {
 | ٤ · `cancel_failed` | `grep` على كل `writeLog(` في `index.js` |
 | ٦ · `PARTIALLY_FULFILLED` | قراءة `classifyOrder` في `ecommoda-order-lifecycle` Step 4 |
 
-آخر تحديث: 01-09-2026 — 21:10
+آخر تحديث: 01-09-2026 — 22:00
 
 </div>
