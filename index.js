@@ -1,8 +1,85 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.2.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
-// skills: worker-builder v1.1.0 · html-builder v2.2.0 · constants v1.4.1 ·
+// TOOL_VERSION: v2.7.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// skills: worker-builder v1.1.0 · html-builder v3.0.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.7.0:
+//   🔴 [إصلاح] `get_logs_export` كان بيقص عند 2000 صف **في السكوت** — الواجهة
+//       بتقول "تم تصدير 2000 عملية ✓" والملف ناقص، والموظف يفتكره كامل.
+//       دلوقتي الرد بيشيل `cap` و`total` و`truncated`، والواجهة بتحذّر بالرقمين.
+//       السقف بقى ثابت `LOG_EXPORT_MAX` بدل رقم مدفون في نص الـ SQL.
+//
+// CHANGELOG v2.6.0:
+//   🟡 [جديد] الأداة بقت بتكتب حالة الأوردر S1 (custom.manual_status) =
+//       "Cancelled" مع كل إلغاء — أكشن جديد بطلب أحمد 01-09-2026.
+//       النوع متأكَّد من التعريف الحي (single_line_text_field) و"Cancelled"
+//       موجودة حرفيًا في الـ choices. الانتقال بيتفحص الأول
+//       (order-lifecycle قاعدة 10) وبيترفض ويتسجّل لو غير شرعي — مايتكتبش
+//       في السكوت. الميوتيشن بتعدّي التلات فحوصات (Step 5A ②).
+//       ⚠️ بتتكتب **بعد التأكيد بس**: لو الإلغاء لسه مش مؤكَّد ما بنكتبش
+//       الحالة — "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً. (الـ Flow
+//       الحالي بيكتبها كمان بعد ~15 ثانية، فالحالة مش هتضيع.)
+//   🟡 [جديد] صف D1 تاني مع كل تغيير حالة: tool = 'metafields_change' /
+//       type = 'update' بالقيمة قبل وبعد (order-lifecycle قاعدة 9). السجل ده
+//       هو المصدر الوحيد لأي KPI عن زمن الدورة أو عدد المحاولات.
+//   🔴 [إصلاح] فشل الكتابة في D1 كان بيتحوّل لـ "فشل الإلغاء" (500) والأوردر
+//       اتلغى فعلاً — كذب على فعل لا رجعة فيه. دلوقتي في try/catch محلي
+//       وبيرجّع logged:false + logError زي ما Step 5A ⑦ بيفرض.
+//   🟡 [جديد] actions[] بتتملي أول بأول وبترجع في الرد وفي extra — الواجهة
+//       بتعرض "ما تم فعليًا" منها (html-builder Step 3C). وبترجع كمان في حالة
+//       الفشل، عشان يبان اللي تم قبل ما يقع.
+//   ⚪ [جديد] الرد بيشيل status ("success" | "warning" | "error") صراحةً بدل
+//       ما الواجهة تشتقه.
+//
+// CHANGELOG v2.5.0:
+//   🟡 [جديد] get_logs_count و get_logs_export — التلاتة اللي معيار الـ Log Tab
+//       بيفرضهم بقوا موجودين. get_logs اتحدّث للنسخة القياسية: استبعاد
+//       login/logout في SQL (كان مش موجود خالص) وسقف 100 صف للصفحة بدل 500.
+//   🟡 [جديد] فلاتر السجل بقت بتاخد قوايم: employees / types + dateFrom/dateTo —
+//       امتداد مقصود على النسخة القياسية عشان الفلاتر multi-select اللي
+//       data-table-standard بيفرضها. من غير الامتداد ده الفلترة كانت هتبقى
+//       client-side على الصفحة الحالية، وعدّاد "النتائج" والترقيم يكدبوا.
+//   ⚪ [جديد] extra.result في صفوف D1 ("success" | "warning" | "error") — عمود
+//       "النتيجة" في تاب السجل بيقراه (html-builder Step 3C). الصفوف الأقدم
+//       من النسخة دي مالهاش الحقل، والواجهة بتعرضها "—" مش "✓".
+//
+// CHANGELOG v2.4.0:
+//   🔴 [إصلاح] "لسه قيد التأكيد" كانت بتظهر على إلغاء ناجح ١٠٠% تقريبًا في كل
+//       مرة. التحقق البعدي كان موجود من v2.0.0 بس **من غير أي انتظار**: بيقرا
+//       الأوردر تاني بعد أجزاء من الثانية من الميوتيشن، و orderCancel ميوتيشن
+//       غير متزامنة (بترجّع Job وشوبيفاي بتنفّذ بعدين) — فـ cancelledAt يبقى
+//       لسه null والأداة تقول "مش مؤكَّد" وهي مش عارفة.
+//       دلوقتي waitForCancelConfirmation بتستنى الـ Job نفسه (job(id){done})
+//       بـ backoff متصاعد 400→2200ms (≈٦ ثوانٍ بحد أقصى) وبتوقف أول ما
+//       cancelledAt يتأكد — مفيش نوم ثابت غير مشروط.
+//       ⚠️ الحالة الصفراء لسه ليها معنى: لو عدّت الـ٦ ثوانٍ من غير تأكيد،
+//       دي "ما قدرناش نتأكد" مش "تم" ومش "فشل" — والواجهة بتدي زرار تحقق يدوي.
+//   ⚪ [جديد] رد cancel_order بيشيل verify { jobDone, attempts, waitedMs }
+//       وبيتسجّل في extra في D1 — عشان لو الحالة الصفراء رجعت نبقى عارفين
+//       استنينا قد إيه وإن كان الـ Job خلص ولا لأ.
+//
+// CHANGELOG v2.3.0:
+//   🔴 [إصلاح] البحث برقم الأوردر الطويل (Order ID زي 7186861523266) كان
+//       بيرجّع "لم يتم العثور على الأوردر". parseOrderInput كانت بتعتبر أي رقم
+//       مجرّد **اسم أوردر** وتدوّر بـ name:#7186861523266 — والرابط الكامل بس
+//       هو اللي كان بيشتغل لأن الـ regex بتاعه بيستخرج الـ ID صراحةً. دلوقتي
+//       الدالة بترجّع **قايمة محاولات مرتّبة** (ID الأول لو الرقم ≥ 10 خانات،
+//       الاسم الأول لو أقصر) والـ handler بيجرّبهم بالترتيب.
+//   🔴 [جديد] شرط رابع للإلغاء: displayFulfillmentStatus لازم UNFULFILLED.
+//       قبل كده الأداة كانت بتقرا الحقل ومش بتستخدمه خالص، فأوردر متشحن
+//       (Ready + Fulfilled — وضع شرعي حسب order-lifecycle قاعدة 5) كان ينفع
+//       يتلغي منها، والنتيجة بتتصنّف RTO في كل تقارير الستاك مش إلغاء
+//       (order-lifecycle قاعدة 2). الشرط بيتفحص في lookup_order وتاني في
+//       cancel_order قبل التنفيذ.
+//   🟡 [جديد] إقرار إبلاغ الشحن/المخزن (warehouseNotified) إلزامي لما
+//       manual_status = Confirmed أو Ready. الواجهة بتعرضه كـ checkbox في نافذة
+//       التأكيد وبتقفل زرار التنفيذ من غيره، والـ Worker بيرفض الطلب لو الإقرار
+//       ناقص (دفاع تاني، نفس منطق إعادة فحص manual_status). القيمة بتتسجّل في
+//       extra في D1 مع fulfillmentStatusBefore.
+//   ⚪ [جديد] financialStatusAr / fulfillmentStatusAr — ترجمة الحالات للعربي
+//       عشان الواجهة تعرضها في الـ chips من غير ما تخترع قاموس تاني.
+//   ⚪ [جديد] lookup_order بيرجّع matchedBy ("id" | "name").
 //
 // CHANGELOG v2.2.0:
 //   🟡 [تغيير] REASON_ENUM_MAP اتشال بالكامل. كل إلغاء بيترفع لشوبيفاي بـ
@@ -58,7 +135,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.2.0";
+const WORKER_VERSION = "2.7.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -68,11 +145,65 @@ const ALLOWED_ORIGINS = [
 const ALLOWED_MANUAL_STATUS = new Set(["New Order", "Confirmed", "Ready"]);
 const ALLOWED_FINANCIAL_STATUS = new Set(["PENDING"]);
 
+// شرط رابع — الأوردر لازم يكون لسه ما اتشحنش.
+// السبب مش شكلي: ecommoda-order-lifecycle قاعدة 2 بتقول إن
+//   cancelledAt ≠ null + displayFulfillmentStatus = UNFULFILLED → CANCELLED
+//   cancelledAt ≠ null + displayFulfillmentStatus = FULFILLED   → RTO
+// يعني إلغاء أوردر متشحن بيتحوّل في كل تقارير الستاك لـ RTO مش إلغاء، وده رقم
+// تاني تمامًا (بضاعة اتحركت وراجعة، مش أوردر مات في المخزن). وقاعدة 5 بتقول إن
+// Ready + Fulfilled وضع شرعي (محاولة تسليم مُعادة) — يعني manual_status لوحده
+// مش كافي يمنع الحالة دي. الشرط ده هو اللي بيمنعها.
+const ALLOWED_FULFILLMENT_STATUS = new Set(["UNFULFILLED"]);
+
+// الحالات اللي الأوردر فيها بيبقى اتأكد أو اتجهّز في المخزن — الإلغاء فيها لازم
+// يكون مسبوق بإبلاغ مسئول الشحن/المخزن. New Order لسه ما وصلش لحد.
+const WAREHOUSE_ACK_STATUSES = new Set(["Confirmed", "Ready"]);
+
+// الحالات المسموحة بالعربي — الواجهة بتعرضها في الـ chips وفي أسباب الرفض
+const FINANCIAL_STATUS_AR = {
+  PENDING:             "غير مدفوع",
+  AUTHORIZED:          "محجوز",
+  PARTIALLY_PAID:      "مدفوع جزئيًا",
+  PAID:                "مدفوع",
+  PARTIALLY_REFUNDED:  "مسترجع جزئيًا",
+  REFUNDED:            "مسترجع بالكامل",
+  VOIDED:              "ملغي",
+  EXPIRED:             "منتهي",
+};
+
+const FULFILLMENT_STATUS_AR = {
+  UNFULFILLED:         "لم يتم الشحن",
+  PARTIALLY_FULFILLED: "تم شحن جزء منه",
+  FULFILLED:           "تم الشحن",
+  RESTOCKED:           "رجع للمخزن",
+  ON_HOLD:             "موقوف مؤقتًا",
+  SCHEDULED:           "مجدول للشحن",
+  IN_PROGRESS:         "جارٍ التجهيز للشحن",
+  OPEN:                "مفتوح",
+  PENDING_FULFILLMENT: "في انتظار الشحن",
+};
+
 // كل الإلغاءات بتترفع لشوبيفاي بسبب واحد ثابت: OTHER.
 // قرار أحمد 01-09-2026 — جدول التصنيف (REASON_ENUM_MAP) اتشال بالكامل.
 // السبب التجاري الحقيقي بيتكتب كامل بالعربي في custom.cancel_manual_reason
 // وفي سجل D1، وهما مصدر أي تحليل لأسباب الإلغاء — مش تقارير شوبيفاي.
 const SHOPIFY_CANCEL_REASON = "OTHER";
+
+// ── حالة الأوردر S1 (custom.manual_status) ──
+// النوع متأكَّد من التعريف الحي على شوبيفاي 01-09-2026: single_line_text_field،
+// و"Cancelled" موجودة حرفيًا في قائمة الـ choices. metafieldsSet بترفض الكتابة
+// كلها لو الـ type مش مطابق بالحرف.
+const S1_METAFIELD = { namespace: "custom", key: "manual_status", type: "single_line_text_field" };
+const S1_CANCELLED = "Cancelled";
+
+// ecommoda-order-lifecycle قاعدة 10: أي Worker بيكتب manual_status لازم يتحقق
+// من شرعية الانتقال الأول ويرفض ويسجّل القفزات غير الشرعية — مايكتبش في السكوت.
+// المصدر: references/state-machines.md §جدول الانتقالات (الحالات اللي منها
+// الانتقال لـ Cancelled شرعي).
+const CAN_TRANSITION_TO_CANCELLED = new Set([
+  "New Order", "WhatsApp-Confirmed", "WhatsApp-CANCELLED",
+  "Confirmed", "Confirmed + Edit", "Pending Edit", "Ready",
+]);
 
 // ══════════════════════════════════════════════════════
 // §CORS
@@ -157,19 +288,70 @@ async function writeLog(db, entry) {
   ).run();
 }
 
-async function getLogs(db, { tool = null, employee = null, type = null, search = null, limit = 200, offset = 0 } = {}) {
-  let sql = "SELECT * FROM logs WHERE 1=1";
+/**
+ * Fetch logs from D1 with server-side filtering + pagination.
+ * login/logout excluded server-side via SQL — NOT client-side. Max 100/page.
+ * ⚠️ Do NOT use for XLSX export — use getLogsExport().
+ *
+ * ⚠️ امتداد مقصود على النسخة القياسية في ecommoda-worker-builder →
+ * references/shared-functions.md: الباراميترز `employees` (قايمة) و`types`
+ * (قايمة) و`dateFrom`/`dateTo` **إضافية واختيارية**، والسلوك من غيرها مطابق
+ * حرفيًا للنسخة القياسية. السبب: معيار data-table-standard بيفرض إن كل فلاتر
+ * أي جدول تبقى multi-select، والنسخة القياسية بتاخد `employee` واحد بس —
+ * فالفلترة كانت هتضطر تبقى client-side على الصفحة الحالية، وده بيخلي عدّاد
+ * "النتائج" وترقيم الصفحات يكدبوا. الامتداد ده مرشّح يترفع للمهارة نفسها.
+ */
+function buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo }) {
+  let sql = "SELECT_PLACEHOLDER FROM logs WHERE type NOT IN ('login','logout')";
   const b = [];
   if (tool) { sql += " AND tool = ?"; b.push(tool); }
-  if (employee) { sql += " AND employee = ?"; b.push(employee); }
-  if (type) { sql += " AND type = ?"; b.push(type); }
-  if (search) {
-    sql += " AND (sku LIKE ? OR product_title LIKE ? OR order_name LIKE ? OR notes LIKE ?)";
-    b.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+  if (Array.isArray(employees) && employees.length) {
+    sql += ` AND employee IN (${employees.map(() => "?").join(",")})`;
+    b.push(...employees);
   }
-  sql += " ORDER BY timestamp DESC LIMIT ? OFFSET ?";
-  b.push(Math.min(Number(limit) || 200, 500), Number(offset) || 0);
-  return (await db.prepare(sql).bind(...b).all()).results;
+  if (Array.isArray(types) && types.length) {
+    sql += ` AND type IN (${types.map(() => "?").join(",")})`;
+    b.push(...types);
+  }
+  if (search) {
+    sql += " AND (order_name LIKE ? OR notes LIKE ?)";
+    b.push(`%${search}%`, `%${search}%`);
+  }
+  // التاريخ نص ISO في العمود — المقارنة بأول 10 حروف (YYYY-MM-DD).
+  // ⚠️ الحدود بتوقيت UTC زي ما هي مخزّنة، والعرض بتوقيت القاهرة (UTC+3) —
+  // فرق ٣ ساعات ممكن يخلي عملية بعد ٩ مساءً بتوقيت القاهرة تقع في يوم UTC
+  // اللي بعده. مقبول لفلتر بالأيام، ومكتوب هنا عشان مايتكتشفش كباج بعدين.
+  if (dateFrom) { sql += " AND substr(timestamp, 1, 10) >= ?"; b.push(dateFrom); }
+  if (dateTo)   { sql += " AND substr(timestamp, 1, 10) <= ?"; b.push(dateTo); }
+  return { sql, b };
+}
+
+async function getLogs(db, { tool = null, employees = null, types = null, search = null,
+                             dateFrom = null, dateTo = null, limit = 100, offset = 0 } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+  const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + " ORDER BY timestamp DESC LIMIT ? OFFSET ?";
+  b.push(Math.min(Number(limit) || 100, 100), Math.max(Number(offset) || 0, 0));
+  return (await db.prepare(q).bind(...b).all()).results;
+}
+
+/** عدد الصفوف المطابقة للفلتر — للترقيم. نفس الفلاتر بالظبط، من غير data. */
+async function getLogsCount(db, { tool = null, employees = null, types = null, search = null,
+                                  dateFrom = null, dateTo = null } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+  const row = await db.prepare(sql.replace("SELECT_PLACEHOLDER", "SELECT COUNT(*) as total")).bind(...b).first();
+  return row?.total ?? 0;
+}
+
+// سقف التصدير. ⚠️ الرقم ده لازم يرجع للواجهة مع النتيجة — من غير كده الملف
+// بيتقص في السكوت والموظف يفتكره كامل (فشل صامت، وده أخطر من رسالة خطأ).
+const LOG_EXPORT_MAX = 2000;
+
+/** كل الصفوف المطابقة للتصدير — لحد LOG_EXPORT_MAX صف. ممنوع استخدام getLogs للتصدير. */
+async function getLogsExport(db, { tool = null, employees = null, types = null, search = null,
+                                   dateFrom = null, dateTo = null } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+  const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + ` ORDER BY timestamp DESC LIMIT ${LOG_EXPORT_MAX}`;
+  return (await db.prepare(q).bind(...b).all()).results;
 }
 
 // ══════════════════════════════════════════════════════
@@ -260,19 +442,42 @@ function moneyText(set) {
 }
 
 // ─── §CANCEL::parseOrderInput ───
-// يقبل: "12345" / "#12345" / رابط Admin كامل (…/orders/12345 أو …/orders/#12345)
+// بيرجّع **قايمة محاولات مرتّبة** — مش محاولة واحدة.
+// السبب: "53032" و"7186861523266" الاتنين أرقام مجرّدة، بس الأول اسم أوردر
+// والتاني Order ID. الفارق الوحيد المتاح قبل ما نسأل شوبيفاي هو الطول، فبنرتّب
+// المحاولات بالأرجح وبنجرّب التانية لو الأولى ما لقتش — مفيش تخمين صامت ومفيش
+// إدخال صحيح بيرجع "لم يتم العثور على الأوردر".
+//   بيقبل: 12345 · #12345 · 7186861523266 · رابط أدمن كامل (…/orders/7186861523266)
+const ORDER_ID_MIN_DIGITS = 10;   // أسماء الأوردرات هنا 5 أرقام · الـ IDs 13
+
 function parseOrderInput(raw) {
   const val = String(raw || "").trim();
   if (!val) return null;
 
+  // رابط أدمن — الرقم اللي بعد /orders/ هو الـ ID دايمًا، مفيش لبس
   const urlMatch = val.match(/\/orders\/(#?\d+)/i);
   if (urlMatch) {
-    const seg = urlMatch[1].replace(/^#/, "");
-    return { type: "id", value: seg };
+    return { input: val, candidates: [{ type: "id", value: urlMatch[1].replace(/^#/, "") }] };
   }
   if (/^https?:\/\//i.test(val)) return null; // رابط مش متعرّف عليه
 
-  return { type: "name", value: normalizeOrderName(val) };
+  const cleaned = val.replace(/\s+/g, "");
+
+  // الـ # تصريح صريح إن ده اسم أوردر — مش محتاج تخمين
+  if (cleaned.startsWith("#")) {
+    return { input: val, candidates: [{ type: "name", value: normalizeOrderName(cleaned) }] };
+  }
+
+  if (/^\d+$/.test(cleaned)) {
+    const asId   = { type: "id",   value: cleaned };
+    const asName = { type: "name", value: normalizeOrderName(cleaned) };
+    return {
+      input: val,
+      candidates: cleaned.length >= ORDER_ID_MIN_DIGITS ? [asId, asName] : [asName, asId],
+    };
+  }
+
+  return { input: val, candidates: [{ type: "name", value: normalizeOrderName(cleaned) }] };
 }
 
 function mapOrderNode(order) {
@@ -309,6 +514,9 @@ function mapOrderNode(order) {
     cancelManualReason,
     canCancelByManualStatus: ALLOWED_MANUAL_STATUS.has(manualStatus),
     canCancelByFinancialStatus: ALLOWED_FINANCIAL_STATUS.has(order.displayFinancialStatus),
+    canCancelByFulfillmentStatus: ALLOWED_FULFILLMENT_STATUS.has(order.displayFulfillmentStatus),
+    financialStatusAr: FINANCIAL_STATUS_AR[order.displayFinancialStatus] || "",
+    fulfillmentStatusAr: FULFILLMENT_STATUS_AR[order.displayFulfillmentStatus] || "",
     hasOpenReturn: openReturns.length > 0,
     alreadyCancelled: !!order.cancelledAt,
     fulfillmentsCount: Array.isArray(order.fulfillments) ? order.fulfillments.length : 0,
@@ -414,6 +622,100 @@ async function cancelOrderInShopify(env, token, { orderId, notifyCustomer, resto
   return payload.job;
 }
 
+// ─── §CANCEL::writeManualStatusCancelled ───
+// بتكتب custom.manual_status = "Cancelled" بعد ما الإلغاء يتأكد.
+// بتتحقق من شرعية الانتقال الأول (قاعدة 10)، وبتعدّي التلات فحوصات بتاعة أي
+// ميوتيشن (worker-builder Step 5A ②): خطأ علوي → userErrors → تأكيد الـ payload.
+async function writeManualStatusCancelled(env, token, orderId, statusBefore) {
+  if (statusBefore === S1_CANCELLED) {
+    return { skipped: true, reason: "الحالة كانت Cancelled بالفعل", statusBefore };
+  }
+  if (!CAN_TRANSITION_TO_CANCELLED.has(statusBefore)) {
+    // مايتكتبش في السكوت — يترفض ويترجع بسبب واضح يتسجّل في D1
+    return { skipped: true, reason: `انتقال غير شرعي: "${statusBefore || "فارغ"}" → "${S1_CANCELLED}"`, statusBefore };
+  }
+
+  const mutation = `mutation SetManualStatus($metafields: [MetafieldsSetInput!]!) {
+    metafieldsSet(metafields: $metafields) {
+      metafields { id namespace key value type updatedAt }
+      userErrors { field message code }
+    }
+  }`;
+  const variables = {
+    metafields: [{
+      ownerId: orderId,
+      namespace: S1_METAFIELD.namespace,
+      key: S1_METAFIELD.key,
+      type: S1_METAFIELD.type,
+      value: S1_CANCELLED,
+    }],
+  };
+
+  const data = await shopifyGQL(env, token, mutation, variables, "setManualStatus");
+  const payload = data?.data?.metafieldsSet;
+  const errs = payload?.userErrors || [];
+  if (errs.length) {
+    throw new Error("setManualStatus: " + errs.map(e => `${e.code ? e.code + ": " : ""}${e.message}`).join(" | "));
+  }
+  const written = payload?.metafields?.[0];
+  // الفحص التالت — userErrors فاضية معناها "مفيش اعتراض" مش "اتنفّذت"
+  if (!written?.id || written.value !== S1_CANCELLED) {
+    throw new Error("setManualStatus: شوبيفاي ما أكّدتش كتابة الحالة");
+  }
+  return { skipped: false, statusBefore, statusAfter: S1_CANCELLED, metafield: written };
+}
+
+// ─── §CANCEL::waitForCancelConfirmation ───
+// orderCancel ميوتيشن **غير متزامنة**: شوبيفاي بترجّع Job وبتنفّذ الإلغاء بعدين.
+// النسخة القديمة كانت بتقرا الأوردر تاني **فورًا** (بعد أجزاء من الثانية) —
+// فـ cancelledAt يبقى لسه null دايمًا تقريبًا والأداة تقول "لسه قيد التأكيد"
+// على إلغاء ناجح ١٠٠%. التحقق كان موجود بس من غير صبر.
+//
+// الحل: نستنى الـ Job يخلص فعلاً بـ backoff متصاعد، وبعدين نقرا الأوردر.
+// مفيش نوم ثابت غير مشروط — الحلقة بتقف أول ما cancelledAt يتأكد.
+const CANCEL_VERIFY_DELAYS_MS = [400, 700, 1100, 1600, 2200];   // ≈ 6 ثوانٍ بحد أقصى
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// بترجّع true/false، أو null لو معرفناش (فشل الاستعلام نفسه) — والفرق مهم:
+// null معناها "كمّل واقرا الأوردر"، مش "الـ job لسه شغال".
+async function isJobDone(env, token, jobId) {
+  try {
+    const data = await shopifyGQL(
+      env, token,
+      `query JobStatus($id: ID!) { job(id: $id) { id done } }`,
+      { id: jobId }, "jobStatus"
+    );
+    const done = data?.data?.job?.done;
+    return typeof done === "boolean" ? done : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function waitForCancelConfirmation(env, token, orderId, jobId) {
+  let jobDone = null, waitedMs = 0, attempts = 0, order = null;
+
+  for (const delay of CANCEL_VERIFY_DELAYS_MS) {
+    await sleep(delay);
+    waitedMs += delay;
+    attempts++;
+
+    // لسه الـ job شغال؟ ماتضيّعش نداء على قراءة الأوردر
+    if (jobId && jobDone !== true) {
+      jobDone = await isJobDone(env, token, jobId);
+      if (jobDone === false) continue;
+    }
+
+    order = await getOrderById(env, token, orderId);
+    if (order?.cancelledAt) {
+      return { confirmed: true, jobDone: true, attempts, waitedMs, order };
+    }
+  }
+
+  return { confirmed: false, jobDone, attempts, waitedMs, order };
+}
+
 async function writeCancelReasonMetafield(env, token, orderId, reasonLabel) {
   const mutation = `mutation SetCancelReason($metafields: [MetafieldsSetInput!]!) {
     metafieldsSet(metafields: $metafields) {
@@ -452,11 +754,15 @@ async function handleLookupOrder(request, env) {
 
   const token = await getAccessToken(env);
 
-  let order = null;
-  if (parsed.type === "id") {
-    order = await getOrderById(env, token, `gid://shopify/Order/${parsed.value}`);
-  } else {
-    order = await findOrderByName(env, token, parsed.value);
+  // بنجرّب المحاولات بالترتيب — أول واحدة بترجّع أوردر هي اللي بتتعرض.
+  // ما بنوقفش عند أول فشل: "7186861523266" ممكن يكون ID، و"53032" ممكن يكون اسم،
+  // والاتنين أرقام مجرّدة شكلًا.
+  let order = null, matchedBy = null;
+  for (const cand of parsed.candidates) {
+    order = cand.type === "id"
+      ? await getOrderById(env, token, `gid://shopify/Order/${cand.value}`)
+      : await findOrderByName(env, token, cand.value);
+    if (order) { matchedBy = cand.type; break; }
   }
   if (!order) return json({ ok: false, error: `لم يتم العثور على الأوردر` }, 404, request);
 
@@ -471,8 +777,10 @@ async function handleLookupOrder(request, env) {
   return json({
     ok: true,
     order,
+    matchedBy, // "id" | "name" — إزاي الأداة لقت الأوردر من اللي المستخدم كتبه
     allowedManualStatuses: Array.from(ALLOWED_MANUAL_STATUS),
     allowedFinancialStatuses: Array.from(ALLOWED_FINANCIAL_STATUS),
+    allowedFulfillmentStatuses: Array.from(ALLOWED_FULFILLMENT_STATUS),
     cancelReasons, // array of strings — مش object زي القديم
   }, 200, request);
 }
@@ -482,7 +790,8 @@ async function handleCancelOrder(request, env) {
   const body = await request.json().catch(() => null);
   if (!body) return badRequest("Body غير صالح", request);
 
-  const { orderId, reasonLabel, restock = true, notifyCustomer = false, employee } = body;
+  const { orderId, reasonLabel, restock = true, notifyCustomer = false, employee,
+          warehouseNotified = false } = body;
 
   if (!employee) return badRequest("بيانات الموظف ناقصة — اعمل Login مرة أخرى", request);
   if (!orderId || !String(orderId).startsWith("gid://shopify/Order/")) {
@@ -516,6 +825,24 @@ async function handleCancelOrder(request, env) {
       request
     );
   }
+  if (!ALLOWED_FULFILLMENT_STATUS.has(orderBefore.displayFulfillmentStatus)) {
+    return badRequest(
+      `غير مسموح بإلغاء الأوردر لأن حالة الشحن = "${orderBefore.displayFulfillmentStatus || "فارغ"}". ` +
+      `المسموح فقط: UNFULFILLED — الأوردر اللي اتشحن فعلاً إلغاؤه بيتسجّل RTO مش إلغاء ` +
+      `(ecommoda-order-lifecycle قاعدة 2)`,
+      request
+    );
+  }
+  // Confirmed / Ready = الأوردر اتأكد أو اتجهّز في المخزن فعلاً. الإلغاء من غير
+  // إبلاغ مسئول الشحن/المخزن بيسيب قطعة متجهّزة تتشحن بعد الإلغاء. الواجهة بتمنعها
+  // بـ checkbox، والفحص ده هو الدفاع التاني — نفس منطق فحص manual_status فوق.
+  if (WAREHOUSE_ACK_STATUSES.has(orderBefore.manualStatus) && !warehouseNotified) {
+    return badRequest(
+      `الأوردر في حالة "${orderBefore.manualStatus}" — لازم تأكيد إبلاغ مسئول الشحن/المخزن قبل الإلغاء`,
+      request
+    );
+  }
+
   // دفاع إضافي — عمليًا مستحيل يحصل على أوردر لسه ما اتوصلش لـ Delivered،
   // لكن شوبيفاي نفسها كمان بترفض orderCancel لو فيه return شغّال.
   if (orderBefore.hasOpenReturn) {
@@ -525,33 +852,91 @@ async function handleCancelOrder(request, env) {
   const shopifyReason = SHOPIFY_CANCEL_REASON;
   const staffNote = `Cancelled from EcomModa Order Cancel Tool by ${employee}. Manual reason: ${reasonLabel}`.slice(0, 255);
 
-  let job = null, metafield = null, confirmed = false;
+  let job = null, metafield = null, confirmed = false, verify = null, s1 = null;
+  // ⚠️ المصفوفة دي بتتملي **أول بأول** مش في الآخر (worker-builder Step 5A ⑤):
+  // مسار الإلغاء لا رجعة فيه، فأوردر اتلغى وفشلت كتابة حالته لازم يبان في
+  // السجل إنه اتلغى فعلاً — مش "ما حصلش حاجة".
+  const actions = [];
 
   try {
     job = await cancelOrderInShopify(env, token, { orderId, notifyCustomer, restock, shopifyReason, staffNote });
+    actions.push(restock ? "إلغاء الأوردر على شوبيفاي + استرجاع المخزون" : "إلغاء الأوردر على شوبيفاي");
+
     metafield = await writeCancelReasonMetafield(env, token, orderId, reasonLabel);
+    actions.push(`كتابة سبب الإلغاء: ${reasonLabel}`);
 
-    // تحقق فعلي بعد التنفيذ — مش بس نشوف إن الـ job اتقبل
-    const verify = await getOrderById(env, token, orderId);
-    confirmed = !!verify?.cancelledAt;
+    // تحقق فعلي بعد التنفيذ — بانتظار الـ Job، مش قراءة فورية
+    verify = await waitForCancelConfirmation(env, token, orderId, job?.id);
+    confirmed = verify.confirmed;
+    if (confirmed) actions.push("تأكيد الإلغاء من شوبيفاي (cancelledAt)");
 
-    await writeLog(env.DB, {
-      tool: TOOL_NAME, type: "cancel", employee,
-      orderId: orderBefore.numericId, orderName: orderBefore.name,
-      notes: `تم إلغاء الأوردر — السبب: ${reasonLabel}${confirmed ? "" : " (لسه مش مؤكَّد من شوبيفاي)"}`,
-      extra: {
-        orderGid: orderId, manualStatusBefore: orderBefore.manualStatus,
-        reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
-        job, metafield, confirmed,
-      },
-    });
+    // ── حالة الأوردر S1 → Cancelled ──
+    // بتتكتب **بعد التأكيد بس**: "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً،
+    // ولو كتبناها على إلغاء لسه مش مؤكَّد ممكن نوسم أوردر لسه حي.
+    if (confirmed) {
+      try {
+        s1 = await writeManualStatusCancelled(env, token, orderId, orderBefore.manualStatus);
+        actions.push(s1.skipped
+          ? `حالة الأوردر S1 ما اتغيّرتش — ${s1.reason}`
+          : `تحديث حالة الأوردر S1: "${s1.statusBefore || "فارغ"}" → "${S1_CANCELLED}"`);
+      } catch (e) {
+        // فشل كتابة الحالة **مايلغيش** إن الأوردر اتلغى فعلاً — يتسجّل ويتعرض
+        s1 = { failed: true, error: e.message, statusBefore: orderBefore.manualStatus };
+        actions.push(`⚠️ فشل تحديث حالة الأوردر S1 — ${e.message}`);
+      }
+    } else {
+      s1 = { skipped: true, reason: "الإلغاء لسه مش مؤكَّد من شوبيفاي", statusBefore: orderBefore.manualStatus };
+      actions.push("حالة الأوردر S1 ما اتغيّرتش — الإلغاء لسه مش مؤكَّد");
+    }
+
+    const status = confirmed ? (s1?.failed ? "warning" : "success") : "warning";
+
+    // ⚠️ فشل D1 مايتحوّلش لفشل العملية (Step 5A ⑦) — الأوردر اتلغى فعلاً،
+    // فبنرجّع logged:false عشان الواجهة تحذّر بدل ما نقول "فشل الإلغاء" كذبًا.
+    let logged = true, logError = null;
+    try {
+      await writeLog(env.DB, {
+        tool: TOOL_NAME, type: "cancel", employee,
+        orderId: orderBefore.numericId, orderName: orderBefore.name,
+        notes: `تم إلغاء الأوردر — السبب: ${reasonLabel}${confirmed ? "" : " (لسه مش مؤكَّد من شوبيفاي)"}`,
+        extra: {
+          orderGid: orderId, manualStatusBefore: orderBefore.manualStatus,
+          reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
+          warehouseNotified: !!warehouseNotified,
+          fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
+          job, metafield, confirmed, s1, actions,
+          result: status,   // Step 3C — عمود النتيجة في تاب السجل
+          verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
+        },
+      });
+
+      // ecommoda-order-lifecycle قاعدة 9 + Step 5B قاعدة 3: كل تغيير حالة
+      // يتسجّل تحت tool = 'metafields_change' / type = 'update' بالقيمة قبل وبعد.
+      // السجل ده هو **المصدر الوحيد** لأي KPI عن زمن الدورة أو عدد المحاولات —
+      // كتابة ناقصة = فجوة دائمة في الأرقام دي.
+      if (s1 && !s1.skipped && !s1.failed) {
+        await writeLog(env.DB, {
+          tool: "metafields_change", type: "update", employee,
+          orderId: orderBefore.numericId, orderName: orderBefore.name,
+          valueBefore: s1.statusBefore || null, valueAfter: S1_CANCELLED,
+          notes: `custom.manual_status: "${s1.statusBefore || "فارغ"}" → "${S1_CANCELLED}" (من أداة إلغاء الأوردرات)`,
+          extra: { orderGid: orderId, source: TOOL_NAME, reasonLabel, metafield: s1.metafield },
+        });
+      }
+    } catch (e) {
+      logged = false; logError = e.message;
+    }
 
     return json({
       ok: true,
+      status,
+      confirmed, logged, logError, actions,
       message: confirmed
         ? `تم إلغاء الأوردر ${orderBefore.name} وتأكيده`
-        : `تم إرسال طلب إلغاء الأوردر ${orderBefore.name} — لسه قيد التأكيد من شوبيفاي`,
-      confirmed, order: orderBefore, job, metafield,
+        : `تم إرسال طلب إلغاء الأوردر ${orderBefore.name} — شوبيفاي ما أكّدتش الإلغاء خلال ` +
+          `${Math.round((verify?.waitedMs || 0) / 1000)} ثوانٍ. الإلغاء غالبًا هيكمل لوحده — اضغط "تحقق الآن"`,
+      order: orderBefore, job, metafield, s1,
+      verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
     }, 200, request);
 
   } catch (err) {
@@ -562,24 +947,61 @@ async function handleCancelOrder(request, env) {
       extra: {
         orderGid: orderId, manualStatusBefore: orderBefore.manualStatus,
         reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
+        warehouseNotified: !!warehouseNotified,
+        fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
+        result: "error",   // Step 3C
+        actions,           // اللي تم فعلاً قبل الفشل — مش قايمة فاضية
         error: err.message,
       },
     }).catch(() => {});
-    return json({ ok: false, error: err.message }, 500, request);
+    return json({ ok: false, status: "error", actions, error: err.message }, 500, request);
   }
+}
+
+// ─── §LOG-ENDPOINTS::logParams ───
+function logParamsFrom(url) {
+  const list = k => (url.searchParams.get(k) || "").split(",").map(v => v.trim()).filter(Boolean);
+  return {
+    tool: TOOL_NAME,
+    employees: list("employees"),
+    types: list("types"),
+    search: url.searchParams.get("search") || null,
+    dateFrom: url.searchParams.get("dateFrom") || null,
+    dateTo: url.searchParams.get("dateTo") || null,
+  };
 }
 
 async function handleGetLogs(request, env) {
   const url = new URL(request.url);
-  const logs = await getLogs(env.DB, {
-    tool: TOOL_NAME,
-    employee: url.searchParams.get("employee") || null,
-    type: url.searchParams.get("type") || null,
-    search: url.searchParams.get("search") || null,
+  const entries = await getLogs(env.DB, {
+    ...logParamsFrom(url),
     limit: Number(url.searchParams.get("limit") || 100),
     offset: Number(url.searchParams.get("offset") || 0),
   });
-  return json({ ok: true, logs }, 200, request);
+  return json({ ok: true, entries }, 200, request);
+}
+
+async function handleGetLogsCount(request, env) {
+  const url = new URL(request.url);
+  const total = await getLogsCount(env.DB, logParamsFrom(url));
+  return json({ ok: true, total }, 200, request);
+}
+
+async function handleGetLogsExport(request, env) {
+  const url = new URL(request.url);
+  const params = logParamsFrom(url);
+  // العدّ الحقيقي جنب الصفوف — عشان الواجهة تقدر تقول "2000 من أصل 3500"
+  // بدل ما تقول "تم تصدير 2000 ✓" على ملف مقصوص.
+  const [entries, total] = await Promise.all([
+    getLogsExport(env.DB, params),
+    getLogsCount(env.DB, params),
+  ]);
+  return json({
+    ok: true, entries,
+    cap: LOG_EXPORT_MAX,
+    total,
+    truncated: total > LOG_EXPORT_MAX,
+  }, 200, request);
 }
 
 async function handleDiag(request, env) {
@@ -606,6 +1028,7 @@ function handleGetConfig(request) {
     allowedOrigins: ALLOWED_ORIGINS,
     allowedManualStatuses: Array.from(ALLOWED_MANUAL_STATUS),
     allowedFinancialStatuses: Array.from(ALLOWED_FINANCIAL_STATUS),
+    allowedFulfillmentStatuses: Array.from(ALLOWED_FULFILLMENT_STATUS),
   }, 200, request);
 }
 
@@ -685,6 +1108,8 @@ export default {
 
       // ─── §LOG-ENDPOINTS ───────────────────────────────────
       if (action === "get_logs") return await handleGetLogs(request, env);
+      if (action === "get_logs_count") return await handleGetLogsCount(request, env);
+      if (action === "get_logs_export") return await handleGetLogsExport(request, env);
       // ──────────────────────────────────────────────────────
 
       return json({ ok: false, error: "Not found" }, 404, request);
