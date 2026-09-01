@@ -1,8 +1,17 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.1.1  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.2.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v1.1.0 · html-builder v2.2.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.2.0:
+//   🟡 [تغيير] REASON_ENUM_MAP اتشال بالكامل. كل إلغاء بيترفع لشوبيفاي بـ
+//       OTHER — الحالي وأي سبب جديد. قرار أحمد 01-09-2026.
+//       الدافع: التصنيف كان تقارير خشنة بس، وكان بيحمل فخ صامت (أي سبب
+//       جديد على شوبيفاي بيقع على OTHER من غير خطأ ولا تحذير). شيل الجدول
+//       بيشيل الفخ من أصله ويخلي السلوك متوقع دايمًا.
+//       ⚠️ الأثر: تقرير أسباب الإلغاء في شوبيفاي بقى كله "Other" بلا تقسيم.
+//       أي تحليل للأسباب مصدره custom.cancel_manual_reason أو D1.
 //
 // CHANGELOG v2.1.1:
 //   🟡 [تغيير] REASON_ENUM_MAP اتراجع واتأكد من أحمد (01-09-2026) — بقى
@@ -42,16 +51,14 @@
 //
 // ⚠️ manual_status المسموح فضل New Order/Confirmed/Ready (زي ما كان) —
 //     أحمد قرر نسيبه زي ما هو، مش New Order بس.
-// ⚠️ REASON_ENUM_MAP تحت ده تصنيف مبدئي مني لكل سبب من الـ 14 على
-//     enum شوبيفاي (CUSTOMER/STAFF/INVENTORY/FRAUD/OTHER) — راجعه، مش
-//     مؤكَّد من أحمد، وأي قيمة غير مصنّفة بترجع OTHER تلقائيًا (آمن).
+// ⚠️ سبب الإلغاء المرفوع لشوبيفاي ثابت OTHER دايمًا — شوف v2.2.0 فوق.
 // ══════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.1.1";
+const WORKER_VERSION = "2.2.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -61,25 +68,11 @@ const ALLOWED_ORIGINS = [
 const ALLOWED_MANUAL_STATUS = new Set(["New Order", "Confirmed", "Ready"]);
 const ALLOWED_FINANCIAL_STATUS = new Set(["PENDING"]);
 
-// تصنيف مبدئي لكل قيمة من قائمة custom.cancel_manual_reason الحقيقية على
-// enum شوبيفاي الرسمي (OrderCancelReason). راجعه مع أحمد قبل الاعتماد النهائي.
-const REASON_ENUM_MAP = {
-  "لا يرد نهائي على المندوب": "CUSTOMER",
-  "لا يوجد سبب": "CUSTOMER",
-  "لم يتم الرد للتأكيد": "CUSTOMER",
-  "رقم غير صحيح": "CUSTOMER",
-  "المنتج غير أصلي": "CUSTOMER",
-  "تأجيل غير محدد": "CUSTOMER",
-  "السعر غالي": "CUSTOMER",
-  "طلب الأوردر بالخطأ": "CUSTOMER",
-  "استلام جزئي - بوسطة": "OTHER",
-  "أوردر مكرر وتم دمجه": "OTHER",
-  "المقاس غير متوفر": "INVENTORY",
-  "العميل سافر": "CUSTOMER",
-  "عطلان": "INVENTORY",
-  "حرامي": "FRAUD",
-};
-const DEFAULT_SHOPIFY_REASON = "OTHER"; // fallback آمن لأي سبب مش في الجدول فوق
+// كل الإلغاءات بتترفع لشوبيفاي بسبب واحد ثابت: OTHER.
+// قرار أحمد 01-09-2026 — جدول التصنيف (REASON_ENUM_MAP) اتشال بالكامل.
+// السبب التجاري الحقيقي بيتكتب كامل بالعربي في custom.cancel_manual_reason
+// وفي سجل D1، وهما مصدر أي تحليل لأسباب الإلغاء — مش تقارير شوبيفاي.
+const SHOPIFY_CANCEL_REASON = "OTHER";
 
 // ══════════════════════════════════════════════════════
 // §CORS
@@ -529,7 +522,7 @@ async function handleCancelOrder(request, env) {
     return badRequest(`الأوردر ${orderBefore.name} عليه طلب استرجاع/استبدال مفتوح`, request);
   }
 
-  const shopifyReason = REASON_ENUM_MAP[reasonLabel] || DEFAULT_SHOPIFY_REASON;
+  const shopifyReason = SHOPIFY_CANCEL_REASON;
   const staffNote = `Cancelled from EcomModa Order Cancel Tool by ${employee}. Manual reason: ${reasonLabel}`.slice(0, 255);
 
   let job = null, metafield = null, confirmed = false;
