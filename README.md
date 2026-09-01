@@ -100,8 +100,8 @@
 ## الملفات
 
 ```
-index.js        Worker v2.8.0 — Cloudflare Workers + D1 + Shopify Admin GraphQL
-index.html      الواجهة v1.7.0 — صفحة واحدة على GitHub Pages
+index.js        Worker v2.9.0 — Cloudflare Workers + D1 + Shopify Admin GraphQL
+index.html      الواجهة v1.8.0 — صفحة واحدة على GitHub Pages
 wrangler.toml   اسم الـ Worker + D1 binding + SHOP_DOMAIN
 CLAUDE.md       قواعد الأداة وفخاخها والمسائل المفتوحة
 SKILL-FIXES.md  إصلاحات مطلوبة في المهارات، مستخرَجة من شغل الأداة دي
