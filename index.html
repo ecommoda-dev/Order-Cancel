@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<!-- skills: html-builder v4.0.0 · worker-builder v1.1.0 · constants v1.4.2 · order-lifecycle v1.1.0 — 01-09-2026 -->
+<!-- skills: html-builder v6.0.0 · worker-builder v2.0.0 · constants v1.4.3 · order-lifecycle v1.2.0 — 01-09-2026 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إلغاء الأوردرات يدويًا — EcomModa</title>
@@ -758,7 +758,7 @@ body {
       </div>
 
       <div class="tbl-body-wrap" id="tblBodyWrap">
-        <div class="export-warn" id="exportWarn" style="display:none;"></div>
+        <div class="export-warn" id="logExportWarn" style="display:none;"></div>
         <div class="tbl-scroll">
           <table class="data-table">
             <thead>
@@ -831,10 +831,14 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>الهيدر كان بيترفرف عند نقطة القفل</b> — قفل الهيدر بيقلّل ارتفاعه، والمتصفح بيعوّض الفرق من موضع السكرول نفسه، فالفعل كان بيحرّك شرطه ويدخل في لوب فتح/قفل سريع. دلوقتي الأداة <b>بتقيس</b> فرق الارتفاع الفعلي وبتحسب عتبة القفل منه بدل رقم ثابت — والقياس بيتعاد لو عرض الشاشة اتغيّر</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>قوائم الفلاتر كانت بتتقفل بعد أول اختيار</b> — القائمة بتتعاد رسمتها مع كل اختيار، فالعنصر اللي اتضغط بيتشال من الصفحة قبل ما الكود يقرر إن الضغطة كانت جوّه القائمة ولا برّه، والنتيجة إنه بيفتكرها برّه ويقفل. دلوقتي تقدر تختار كذا قيمة ورا بعض من غير ما تفتح القائمة كل مرة</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>محاولة إلغاء فاشلة ما اتسجّلتش كانت بتختفي بالكامل</b> — لو الكتابة في السجل نفسها فشلت وقت الفشل، الأداة كانت بتبلع الخطأ ساكتة. دلوقتي بتقول صراحةً "المحاولة فشلت لكن ما اتسجلتش في السجل"</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>فحص المتغيّرات قبل أي فعل</b> — لو إعداد ناقص في الـ Worker، الأداة بتقول اسمه صراحةً بدل رسالة مبهمة زي <code>"error code: 1003" is not valid JSON</code></span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>فلتر "سبب الإلغاء" في تاب السجل</b> — اختيار متعدد زي باقي الفلاتر، والقائمة بتتقرا من <b>السجل نفسه</b> (<code>get_log_reasons</code>) مش من شوبيفاي: سبب اتشال من تعريف الميتافيلد يفضل قابل للفلترة لأن صفوفه لسه موجودة، وسبب جديد لسه ما اتستخدمش مايظهرش. الفلترة <b>server-side</b> زي باقي الفلاتر — فالعدّاد والترقيم والتصدير بيقولوا نفس الرقم</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>النتيجة بقت خطوة منفصلة.</b> بعد إلغاء اتنفّذ فعلاً، البحث وبطاقة الأوردر بيختفوا وتفضل النتيجة لوحدها، والرجوع بزرار واحد صريح: <b>🔄 إلغاء أوردر آخر؟</b> — بيرجّع الأداة لوضعها الأول خالص (مفيش أوردر ولا سبب ولا نتيجة، ومربع البحث فاضي وفيه فوكس). الفشل ✗ بيفضل في مكانه عشان الموظف يعيد المحاولة</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>ثيم الأداة بقى أحمر</b> — استثناء مقصود لهذه الأداة وحدها: دي الأداة الوحيدة اللي بتعمل فعل لا رجعة فيه على أوردر حقيقي، واللون بيقول للموظف بصريًا "إنت في أداة الإلغاء" قبل ما يبص على العنوان. زرار الإلغاء نفسه اتميّز بإطار غامق عشان يفضل واضح إنه هو الفعل الخطر وسط ثيم أحمر</span></li>
-            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>التصدير كان بيتقص عند 2000 صف في السكوت</b> — الرسالة كانت "تم تصدير 2000 عملية ✓" والملف ناقص. دلوقتي بانر تحذير ثابت فوق الجدول بيقول كام صف اتصدّر من أصل كام</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>التصدير كان بيتقص عند السقف في السكوت</b> — الرسالة كانت "تم تصدير … عملية ✓" والملف ناقص. دلوقتي بانر تحذير ثابت فوق الجدول بيقول كام صف اتصدّر من أصل كام</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الأداة بقت بتحدّث حالة الأوردر S1 إلى <code>Cancelled</code></b> مع كل إلغاء مؤكَّد — أكشن جديد. الانتقال بيتفحص الأول، والتغيير بيتسجّل في D1 بالقيمة قبل وبعد</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>سطر <b>"ما تم فعليًا"</b> تحت نتيجة الإلغاء — بيعدّد اللي حصل فعلاً خطوة خطوة (الإلغاء + الاسترجاع · السبب · التأكيد · تحديث S1)، وبيظهر حتى لو العملية فشلت في النص</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>لو الكتابة في السجل فشلت، الأداة كانت بتقول <b>"فشل الإلغاء"</b> والأوردر يكون اتلغى فعلاً. دلوقتي بتقول "تمت لكن ما اتسجلتش"</span></li>
@@ -921,7 +925,7 @@ body {
 
             <h4>تاب سجل العمليات</h4>
             <p>جدول بمعيار <code>data-table-standard</code>: أعمدة التاريخ · الوقت · الموظف · نوع العملية · الأوردر (لينك لشوبيفاي) · سبب الإلغاء · النتيجة · ملاحظات. الفلاتر كلها <b>اختيار متعدد</b> (الموظف · نوع العملية · سبب الإلغاء) + فترة + بحث، والترتيب على الأعمدة مستقل تمامًا عن الفلاتر (3 حالات: تصاعدي → تنازلي → بلا ترتيب).</p>
-            <p><b>الفلترة كلها server-side</b> — يعني عدّاد "النتائج" وترقيم الصفحات بيوصفوا <b>كل</b> الصفوف المطابقة في D1، مش الصفحة المعروضة بس. التصدير كمان بينزّل كل المطابق (لحد 2000 صف)، مش الصفحة الحالية. <code>login</code> و<code>logout</code> مستبعدين في الـ SQL نفسه.</p>
+            <p><b>الفلترة كلها server-side</b> — يعني عدّاد "النتائج" وترقيم الصفحات بيوصفوا <b>كل</b> الصفوف المطابقة في D1، مش الصفحة المعروضة بس. التصدير كمان بينزّل كل المطابق (لحد سقف الـ Worker)، مش الصفحة الحالية. <code>login</code> و<code>logout</code> مستبعدين في الـ SQL نفسه.</p>
 
             <h4>⚙️ إجراءات الإلغاء — الترتيب والشروط</h4>
             <table>
@@ -944,7 +948,7 @@ body {
               <tr><td><code>get_employees</code></td><td>قائمة الموظفين النشطين — بتملا قائمة شاشة الدخول <b>وفلتر الموظف في تاب السجل</b> (نفس المصدر، مفيش قائمة تانية)</td></tr>
               <tr><td><code>get_logs</code></td><td>صفحة واحدة من السجل (100 صف) — فلترة server-side بالكامل: موظفين · أنواع · <b>أسباب</b> · بحث · فترة</td></tr>
               <tr><td><code>get_logs_count</code></td><td>عدد الصفوف المطابقة للفلتر — بيغذّي شبشة "النتائج" وترقيم الصفحات</td></tr>
-              <tr><td><code>get_logs_export</code></td><td>كل الصفوف المطابقة (لحد 2000) — للتصدير بس، مش الصفحة الحالية</td></tr>
+              <tr><td><code>get_logs_export</code></td><td>كل الصفوف المطابقة (لحد سقف الـ Worker <code>cap</code>) — للتصدير بس، مش الصفحة الحالية</td></tr>
               <tr><td><code>get_log_reasons</code></td><td>أسباب الإلغاء الموجودة في السجل (<code>DISTINCT</code> من D1) — بتملا فلتر "سبب الإلغاء". <b>مش</b> من شوبيفاي عن قصد، و<b>مش</b> متفلترة بباقي الفلاتر عشان الخيارات ما تختفيش أثناء الفلترة</td></tr>
             </table>
           </div>
@@ -959,7 +963,7 @@ body {
               <li><code>§TOOL-JS</code> — بحث الأوردر، عرض الأهلية، اختيار السبب، تأكيد الإلغاء، عرض النتيجة (3 حالات)</li>
               <li><code>renderOrderCard()</code> — بتحسب الأهلية من 5 شروط وبتبني الـ chips الأربعة. لو الـ Worker أقدم من v2.3.0 وما بعتش <code>canCancelByFulfillmentStatus</code>، بتحسبها محليًا من <code>displayFulfillmentStatus</code> بدل ما تفترض "مسموح"</li>
               <li><code>openCancelConfirm()</code> / <code>onWarehouseAckChange()</code> — إقرار إبلاغ الشحن/المخزن + قفل زرار التنفيذ</li>
-              <li><code>§TABS-JS</code> — التابات الرئيسية + تثبيت الهيدر عند السكرول (عتبتان + rAF throttle، منعًا للفليكر)</li>
+              <li><code>§TABS-JS</code> — التابات الرئيسية + تثبيت الهيدر عند السكرول. <code>measureSticky()</code> بتقيس فرق ارتفاع الهيدر بين المفتوح والمقفول وبتحسب منه عتبة القفل (<code>STICK_ON = stickyDelta + STICK_OFF + 24</code>) — <b>الرقم مايتكتبش ثابت</b>: قفل الهيدر بيرتد على <code>scrollY</code> نفسه بنفس فرق الارتفاع، فالباند لازم يكون أوسع من الارتداد وإلا الفعل بيغذّي شرطه ويدخل لوب. القياس بيتعاد على تغيّر <b>العرض</b> بس وبـ debounce</li>
               <li><code>§DATETIME</code> — <code>toCairo</code> · <code>formatDate</code> · <code>formatTimeOnly</code> · <code>formatDateForExport</code> · <code>formatTimeForExport</code></li>
               <li><code>§LOG-JS</code> — تاب السجل: multi-select · فلتر الفترة · البحث · الترتيب · الترقيم · التصدير</li>
               <li><code>showResultStep()</code> / <code>resetToSearch()</code> — خطوة النتيجة المنفصلة: الأولى بتخفي <code>#searchStep</code> وتعرض <code>#resultStep</code> (و<code>currentOrder</code> بيفضل زي ما هو عشان زرار التحقق)، والتانية بترجّع الأداة للوضع الأول خالص وبتتنادى كمان من <code>doLogout()</code></li>
@@ -980,6 +984,7 @@ body {
               <li><code>FINANCIAL_STATUS_AR</code> · <code>FULFILLMENT_STATUS_AR</code> — ترجمة حالات شوبيفاي، نسخة احتياطية لو الـ Worker أقدم من v2.3.0</li>
               <li><code>msState</code> — حالة فلاتر السجل (<code>emp</code> · <code>type</code> · <code>reason</code>): العناصر + المختار + بحث القائمة. عناصر <code>emp</code> و<code>reason</code> بتتحمّل من الـ Worker — ممنوع أي قيمة hardcoded فيهم</li>
               <li><code>LOG_PAGE_SIZE = 100</code> · <code>sortState { key, dir }</code> · <code>dateFilterActive</code></li>
+              <li><code>STICK_OFF = 12</code> ثابت · <code>STICK_ON</code> و<code>stickyDelta</code> <b>محسوبين</b> من <code>measureSticky()</code> — أي رقم ثابت مكانهم بيرجّع باج الفليكر</li>
             </ul>
 
             <h4>NOTES</h4>
@@ -987,13 +992,15 @@ body {
               <li><b>عمود "النتيجة" بيقرا <code>extra.result</code>.</b> الصفوف اللي اتكتبت قبل Worker v2.5.0 مالهاش الحقل ده، فبتتعرض "—" مش "✓" — إحنا فعليًا مش عارفين إن كانت اتأكدت وقتها ولا لأ</li>
               <li><b>حدود فلتر التاريخ بتوقيت UTC</b> زي ما الـ timestamp متخزّن في D1، والعرض بتوقيت القاهرة (UTC+3). فرق التلات ساعات ممكن يخلي عملية بعد ٩ مساءً بتوقيت القاهرة تقع في يوم UTC اللي بعده — مقبول لفلتر بالأيام، ومكتوب هنا عشان مايتكتشفش كباج</li>
               <li><b>حارس نسخة الـ Worker حد أدنى مش تطابق.</b> <code>cmpVersion()</code> مقارنة رقمية (مش نصية — <code>"10"</code> أصغر من <code>"9"</code> كنص)، والتحذير يولّع بس لو الـ Worker <b>أقدم</b> من <code>MIN_WORKER_VERSION</code>. النمط القديم (تطابق حرفي) كان تحذير كاذب دايم، والموظف بيتعوّد يتجاهله فالحالة الحقيقية بتعدّي بلا إشارة</li>
-              <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code> · <code>reasons</code>) — امتداد مقصود على النسخة القياسية لدوال السجل، عشان الفلاتر multi-select. من غيره كانت الفلترة هتبقى على الصفحة المحمّلة بس وعدّاد النتائج يكدب</li>
+              <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code> · <code>reasons</code>) من مصدر واحد (<code>logParams()</code>) بتستخدمه التلات نداءات — نداء بفلاتر مختلفة عن اللي جنبه معناه تصدير مش مطابق للمعروض. <code>employees</code> و<code>types</code> بقوا جزء من النسخة القياسية لدوال السجل (worker-builder v2.0.0)، و<code>reasons</code> لسه امتداد محلي</li>
+              <li><b>قائمة الفلتر مابتتقفلش بعد أول اختيار.</b> القائمة بتتعاد رسمتها جوّه الـ <code>onclick</code> نفسه، فالعنصر المضغوط بيبقى مفصول من الصفحة قبل ما listener الإغلاق يشوفه و<code>contains()</code> ترجّع false. الحارس <code>if (!document.contains(e.target)) return;</code> أول الـ listener إلزامي — من غيره الفلتر بيبقى صعب الاستخدام والموظف بيكتفي بقيمة واحدة، يعني multi-select بيتخالف من غير أي رسالة</li>
               <li><b>سبب الإلغاء متخزّن جوّه <code>extra</code> كـ JSON مش عمود مستقل</b>، فالفلترة بتستخدم <code>json_extract(extra,'$.reasonLabel')</code>. الصفوف اللي مالهاش سبب (زي محاولة فشلت قبل اختيار السبب) مش بتطابق أي قيمة في الفلتر — وده الصح</li>
               <li><b>فاصل قيم الفلتر فاصلة (<code>,</code>)</b> في الطرفين. مفيش سبب حالي فيه فاصلة (متأكَّد من D1)، ولو اتضاف واحد لازم الفاصل يتغيّر في الواجهة والـ Worker <b>مع بعض</b> — تغييره في مكان واحد بيدّي صفر نتايج بدون أي خطأ</li>
               <li><b>الثيم الأحمر استثناء موثّق لهذه الأداة وحدها</b> — override للـ <code>--accent</code> بس، زي استثناء <code>Bosta Warehouse Return</code> في <code>ecommoda-html-builder</code>. <code>--red</code> و<code>--red-light</code> ما اتغيّروش، فبانرات الفشل لسه بلونها المعياري</li>
               <li><b>خطوة النتيجة بتاخد الأخضر والأصفر مع بعض.</b> الأصفر (مش مؤكَّد) معناه إن الإلغاء <b>اتبعت فعلاً</b>، والرجوع لبطاقة الأوردر بعده بيغري بمحاولة تانية على أوردر خلاص اتلغى. الأحمر (فشل) بس هو اللي بيفضل في مكانه</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
-              <li><b>سقف التصدير 2000 صف.</b> لو المطابق للفلاتر أكتر، الملف بيتقص — والأداة بتقول كده صراحةً في بانر فوق الجدول بالرقمين (اتصدّر كام من أصل كام). الرقم جاي من الـ Worker (<code>cap</code> · <code>total</code> · <code>truncated</code>) مش متخمّن في الواجهة</li>
+              <li><b>فشل الكتابة في السجل بيتقال صراحةً في الحالتين</b> — نجاح ما اتسجّلش <i>وفشل</i> ما اتسجّلش. التانية كانت متبلوعة، فمحاولة إلغاء فاشلة كانت تختفي من السجل بلا أثر وأي جرد للمحاولات الفاشلة يطلع ناقص</li>
+              <li><b>سقف التصدير بيتحدّد في الـ Worker (<code>LOG_EXPORT_MAX</code>).</b> لو المطابق للفلاتر أكتر، الملف بيتقص — والأداة بتقول كده صراحةً في بانر فوق الجدول بالرقمين (اتصدّر كام من أصل كام). الرقم جاي من الـ Worker (<code>cap</code> · <code>total</code> · <code>truncated</code>) مش متخمّن في الواجهة</li>
               <li><b>حالة S1 بتتكتب بعد التأكيد بس.</b> لو الإلغاء رجع أصفر (مش مؤكَّد)، الحالة ما بتتكتبش — "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً. فيه Flow على شوبيفاي بيكتبها كمان بعد ~15 ثانية، فالحالة مش بتضيع</li>
               <li>فشل تحديث S1 <b>مايلغيش</b> إن الأوردر اتلغى — النتيجة بتبقى ⚠ أصفر وسطر "ما تم فعليًا" بيقول إيه اللي تم وإيه اللي فشل</li>
               <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها إن الـ Worker استنى الـ Job بتاع <code>orderCancel</code> لمدة ≈٦ ثوانٍ (backoff متصاعد 400→2200ms) و<code>cancelledAt</code> لسه ما اتسجّلش. دي <b>"ما قدرناش نتأكد"</b> — مش "تم" ومش "فشل". الـ Job بيكمل لوحده في الغالب، فالبانر فيه زرار <code>recheckCancelStatus()</code> بيعيد القراءة ويحوّله لأخضر لو اتأكد. لو فضلت صفرا بعد كذا محاولة، افتح الأوردر في شوبيفاي</li>
@@ -1093,7 +1100,7 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.7.0';
+const TOOL_VERSION = 'v1.8.0';
 
 // أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
 // get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
@@ -1768,9 +1775,11 @@ async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
         <ul>${actions.map(a => `<li>${a}</li>`).join('')}</ul>
       </div>` : '';
 
-    // العملية تمت لكن ما اتسجلتش في السجل — تنبيه صريح مش صمت
-    const logWarn = (res.ok && res.logged === false) ? `
-      <div class="log-warn">⚠️ العملية تمت لكن <b>ما اتسجلتش في السجل</b>${res.logError ? ` — ${res.logError}` : ''}</div>` : '';
+    // ما اتسجلتش في السجل — تنبيه صريح مش صمت، **في الحالتين**: نجاح ما اتسجّلش
+    // (العملية موجودة على شوبيفاي ومش في السجل) وفشل ما اتسجّلش (المحاولة نفسها
+    // اختفت من السجل، وده بيخلي أي جرد للمحاولات الفاشلة ناقص).
+    const logWarn = (res.logged === false) ? `
+      <div class="log-warn">⚠️ ${res.ok ? 'العملية تمت' : 'المحاولة فشلت'} لكن <b>ما اتسجلتش في السجل</b>${res.logError ? ` — ${res.logError}` : ''}</div>` : '';
 
     const bannerHtml = `
       <div class="result-banner ${status}" id="resultBanner">
@@ -1903,22 +1912,61 @@ function switchMainTab(tab) {
   closeTabChipMenu();
 }
 
-// عتبتان (hysteresis) + rAF throttle — عتبة واحدة بتعمل فليكر حوالين نقطة القفل
-const STICK_ON = 40, STICK_OFF = 12;
-let stickyRafPending = false;
+// ── Sticky/compact toggle (Hysteresis **مقيسة** + rAF throttle — tabs-and-modals § 1b) ──
+// ⚠️ العتبتين الثابتتين (12/40) **ما قفلوش** الفليكر — خفّفوه بس. السبب اللي فات:
+// قفل الهيدر بيقلّل ارتفاعه فوق منطقة العرض، والمتصفح (scroll anchoring) بيحافظ
+// على المحتوى مكانه فبيطرح فرق الارتفاع من scrollY نفسه. الفرق هنا أكبر من الباند
+// كله، يعني الفعل بيحرّك شرطه:
+//   y=42 → يقفل → scrollY يرتد لـ ~0 → 0 < 12 → يفتح → يرجع 42 → يقفل … لوب
+// القانون العام: أي حالة on/off بتتحدد من scrollY وتغييرها بيحرّك scrollY نفسه —
+// الـ hysteresis لازم تكون **أوسع من الحركة اللي بتسبّبها**. والفرق ده بيختلف من
+// أداة لأداة حسب الهيدر والوصف وشريط التابات، **فمينفعش يتكتب رقم ثابت**.
+const stickyWrap = document.getElementById('stickyWrap');
+const STICK_OFF = 12;              // تحت الرقم ده يترجع مفتوح
+let STICK_ON = 140;                // بيتحسب من الارتفاع الفعلي — دي قيمة مبدئية آمنة بس
+let stickyDelta = 0, stickyW = 0, stickyRafPending = false;
+
+// بيقيس كام بكسل ارتفاع الهيدر بيقلّ لما يتقفل. القياس ده هو اللي بيحدد عرض الـ
+// hysteresis. التبديل جوّه الدالة بيحصل والترانزيشن مطفي وفي نفس الفريم — مفيش
+// paint بين القراءتين، فالمستخدم مابيشوفش أي رفة.
+function measureSticky() {
+  if (!stickyWrap) return;
+  const wasStuck = stickyWrap.classList.contains('stuck');
+  const nodes = [stickyWrap, ...stickyWrap.querySelectorAll('*')];
+  const prev  = nodes.map(n => n.style.transition);
+  nodes.forEach(n => n.style.transition = 'none');
+  stickyWrap.classList.remove('stuck');  const open = stickyWrap.offsetHeight;
+  stickyWrap.classList.add('stuck');     const shut = stickyWrap.offsetHeight;
+  stickyWrap.classList.toggle('stuck', wasStuck);
+  stickyWrap.offsetHeight;                                  // reflow قبل رجوع الترانزيشن
+  nodes.forEach((n, i) => n.style.transition = prev[i]);
+  stickyDelta = Math.max(0, open - shut);
+  STICK_ON = Math.max(40, stickyDelta + STICK_OFF + 24);    // ← الباند أوسع من الارتداد
+  stickyW = window.innerWidth;
+}
+
 function onPageScroll() {
   if (stickyRafPending) return;
   stickyRafPending = true;
   requestAnimationFrame(() => {
     stickyRafPending = false;
-    const wrap = document.getElementById('stickyWrap');
-    if (!wrap) return;
-    const y = window.scrollY, isStuck = wrap.classList.contains('stuck');
-    if (!isStuck && y > STICK_ON) wrap.classList.add('stuck');
-    else if (isStuck && y < STICK_OFF) wrap.classList.remove('stuck');
+    if (!stickyWrap) return;
+    const y = window.scrollY, isStuck = stickyWrap.classList.contains('stuck');
+    if (!isStuck && y > STICK_ON)      stickyWrap.classList.add('stuck');
+    else if (isStuck && y < STICK_OFF) stickyWrap.classList.remove('stuck');
   });
 }
 window.addEventListener('scroll', onPageScroll, { passive: true });
+
+// ⚠️ إعادة القياس على تغيّر **العرض** بس. ارتفاع الشاشة بيتغيّر عشرات المرات على
+// الموبايل (شريط عنوان المتصفح بيطلع وينزل)، والقياس بيلمس الكلاس — فربطه بالـ
+// resize الخام بيعمل رفرفة بنفسه.
+let stickyResizeTimer;
+window.addEventListener('resize', () => {
+  if (window.innerWidth === stickyW) return;
+  clearTimeout(stickyResizeTimer);
+  stickyResizeTimer = setTimeout(measureSticky, 150);
+});
 
 function updateTabChip() {
   const btn = document.getElementById(currentTab === 'main' ? 'tabMain' : 'tabLog');
@@ -2041,7 +2089,15 @@ function msClear(key) {
   msState[key].selected.clear();
   msRenderList(key); renderChips(); onLogFilterChanged();
 }
+// إغلاق أي قائمة مفتوحة لو الضغط كان برّه الـ wrap بتاعها.
+// ⚠️ الحارس الأول **إلزامي** (multi-select-filter § 8): `msRenderList` بتعيد بناء
+// الـ innerHTML جوّه الـ inline onclick، فالعنصر اللي المستخدم ضغط عليه بيتشال من
+// الـ DOM **قبل** ما الحدث يوصل للـ listener ده — و`contains()` على عنصر detached
+// بترجّع false، فالكود بيفتكر الضغطة كانت برّه ويقفل القائمة بعد **أول** اختيار.
+// النتيجة: كل قيمة إضافية تكلّف المستخدم فتح القائمة من أول وجديد، وده بيدفعه
+// يكتفي بقيمة واحدة — يعني بند ٢١ (multi-select) بيتخالف من غير أي رسالة خطأ.
 document.addEventListener('click', (e) => {
+  if (!document.contains(e.target)) return;   // ← لا تشيله
   Object.keys(msState).forEach(k => {
     const wrap = document.getElementById(`msWrap-${k}`);
     if (wrap && !wrap.contains(e.target)) {
@@ -2172,7 +2228,7 @@ function onLogSearchInput(el) {
 function onLogFilterChanged() {
   logCurrentPage = 1;
   updateFilterIconState();
-  const w = document.getElementById('exportWarn');
+  const w = document.getElementById('logExportWarn');
   if (w) w.style.display = 'none';   // تحذير تصدير قديم مايخصّش فلاتر جديدة
   fetchLog();
 }
@@ -2224,7 +2280,7 @@ function applySort(rows) {
 }
 
 // ─── §LOG-JS::fetch ───
-function logQueryParams() {
+function logParams() {
   const p = {};
   const emps = [...msState.emp.selected], types = [...msState.type.selected];
   const reasons = [...msState.reason.selected];
@@ -2277,7 +2333,7 @@ async function fetchLog() {
   const tbody = document.getElementById('logTableBody');
   tbody.innerHTML = '<tr class="empty-row"><td colspan="8">⏳ جارٍ التحميل...</td></tr>';
   try {
-    const base = logQueryParams();
+    const base = logParams();
     const [pageData, countData] = await Promise.all([
       apiGet('get_logs', { ...base, limit: LOG_PAGE_SIZE, offset: (logCurrentPage - 1) * LOG_PAGE_SIZE }),
       apiGet('get_logs_count', base),
@@ -2343,9 +2399,9 @@ async function exportLogXLSX() {
   const btn = document.getElementById('logExportBtn');
   btn.disabled = true; btn.textContent = '⏳ جارٍ التصدير...';
   try {
-    const data = await apiGet('get_logs_export', logQueryParams());
+    const data = await apiGet('get_logs_export', logParams());
     if (!data.ok) throw new Error(data.error || 'تعذّر التصدير');
-    document.getElementById('exportWarn').style.display = 'none';
+    document.getElementById('logExportWarn').style.display = 'none';
     const rows = (data.entries || []).map(buildLogRow).map(r => ({
       'التاريخ':     r.iso ? formatDateForExport(r.iso) : null,
       'الوقت':       r.iso ? formatTimeForExport(r.iso) : null,
@@ -2381,7 +2437,7 @@ async function exportLogXLSX() {
     const total = (typeof data.total === 'number') ? data.total : null;
     const truncated = data.truncated === true || (cap !== null && rows.length >= cap);
     if (truncated) {
-      const warn = document.getElementById('exportWarn');
+      const warn = document.getElementById('logExportWarn');
       warn.innerHTML = `⚠️ <b>التصدير اتقص</b> — الملف فيه ${rows.length.toLocaleString('en-US')} صف`
         + (total !== null ? ` من أصل <b>${total.toLocaleString('en-US')}</b> مطابقين للفلاتر` : '')
         + `. ضيّق الفترة أو الفلاتر وصدّر على دفعات.`;
@@ -2428,6 +2484,7 @@ checkWorkerVersion();
 updateLoginSettingsBtn();
 buildTabChipMenu();
 updateTabChip();
+measureSticky();          // ← بعد رسم التابات والـ chip — قبلهم الارتفاع لسه مش نهائي
 msRenderList('emp');
 msRenderList('type');
 msRenderList('reason');

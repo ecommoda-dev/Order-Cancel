@@ -2,14 +2,22 @@
 
 # إصلاحات مطلوبة في المهارات — مستخرَجة من `Order-Cancel`
 
-![version](https://img.shields.io/badge/version-v1.2.0-blue)
+![version](https://img.shields.io/badge/version-v2.0.0-blue)
 
 الملف ده **مدخلات لجلسة تعديل مهارات**، مش توثيق للأداة. كل بند هنا طلع من
 شغل فعلي على `Order-Cancel` يوم 01-09-2026، ومعاه **دليل مقاس** مش رأي.
 
-> **الحالة:** ده البند الوحيد المفتوح على `Order-Cancel` (01-09-2026) — كل
-> باقي المسائل اتقفلت. البندان ٣ و٤ كانوا مسجّلين في `CLAUDE.md` لوحدهم
-> واتنقلوا هنا عشان مايتكرروش في مكانين.
+> 🟢 **الحالة بعد جرد 01-09-2026 (مراجعة الأداة على آخر المهارات):** ستة من
+> السبعة **اتنفّذوا فعلاً في المهارات** — البنود ١ و٣ (الشق الأساسي منه) في
+> `ecommoda-worker-builder` v2.0.0 · البند ٢ في `ecommoda-html-builder` v5.0.0
+> · البندان ٤ و٥ في `ecommoda-constants` v1.4.3 · البند ٦ في
+> `ecommoda-order-lifecycle` v1.2.0 (اتسجّل كفجوة G-14 بقرار أحمد، من غير
+> تحريك أي دلو).
+> **الباقي مفتوح:** البند ٧ (قاعدة الثيم لسه بتقول "استثناء وحيد") و**نص
+> البند ٣**: المهارة تبنّت `employees[]`/`types[]` لكن **مش** الفلترة بحقل
+> متخزّن جوّه `extra` (`reasons` + `json_extract`) — فده لسه امتداد محلي
+> في `Order-Cancel` وحدها.
+> عمود «الحالة» في الجدول تحت هو المرجع.
 >
 > ⚠️ **اقرا `ecommoda-skill-versioning` قبل ما تنفّذ أي بند.** كل تعديل لازم
 > يطلع بـ bump في `SKILL.md` + بند مصنَّف في `references/CHANGELOG.md` بتاع
@@ -23,15 +31,15 @@
 
 ## ملخّص
 
-| # | المهارة | البند | المستوى | التصنيف |
-|---|---|---|---|---|
-| ١ | `ecommoda-worker-builder` | التحقق بعد ميوتيشن غير متزامنة لازم **يستنى**، مش يقرا فورًا | MAJOR | 🔴 كاسر |
-| ٢ | `ecommoda-html-builder` | تصدير الـ Log Tab بيتقص عند السقف **في السكوت** | MAJOR | 🔴 كاسر |
-| ٣ | `ecommoda-worker-builder` | دوال السجل تقبل **قوايم** فلاتر + فلترة بحقل جوّه `extra` (تعارض مع معيار الجداول) | MINOR | 🟡 مُستحسن |
-| ٤ | `ecommoda-constants` | `cancel_failed` ناقصة من صف `order_cancel` في §7 | PATCH | ⚪ تحريري |
-| ٥ | `ecommoda-constants` | `metafields_change` بقى ليه كاتب تاني | PATCH | ⚪ تحريري |
-| ٦ | `ecommoda-order-lifecycle` | `PARTIALLY_FULFILLED` بيتصنّف `CANCELLED` نضيف — **اقتراح فجوة** | MINOR | 🟡 (لو اتقبل) |
-| ٧ | `ecommoda-html-builder` | قاعدة ٢٥ (الثيم) بتسمّي استثناء واحد — بقوا **اتنين** | PATCH | ⚪ تحريري |
+| # | المهارة | البند | المستوى | التصنيف | الحالة |
+|---|---|---|---|---|---|
+| ١ | `ecommoda-worker-builder` | التحقق بعد ميوتيشن غير متزامنة لازم **يستنى**، مش يقرا فورًا | MAJOR | 🔴 كاسر | ✅ اتنفّذ — worker-builder **v2.0.0** (`waitForJobConfirmation`) |
+| ٢ | `ecommoda-html-builder` | تصدير الـ Log Tab بيتقص عند السقف **في السكوت** | MAJOR | 🔴 كاسر | ✅ اتنفّذ — html-builder **v5.0.0** + worker-builder **v2.0.0** (`cap`/`total`/`truncated`) |
+| ٣ | `ecommoda-worker-builder` | دوال السجل تقبل **قوايم** فلاتر + فلترة بحقل جوّه `extra` (تعارض مع معيار الجداول) | MINOR | 🟡 مُستحسن | 🟡 **نصّه اتنفّذ** — `employees[]`/`types[]` + `buildLogFilterSQL` + `logParamsFrom` في worker-builder **v2.0.0**. الفلترة بحقل جوّه `extra` (`reasons` + `json_extract`) **لسه مش في المهارة** |
+| ٤ | `ecommoda-constants` | `cancel_failed` ناقصة من صف `order_cancel` في §7 | PATCH | ⚪ تحريري | ✅ اتنفّذ — constants **v1.4.3** |
+| ٥ | `ecommoda-constants` | `metafields_change` بقى ليه كاتب تاني | PATCH | ⚪ تحريري | ✅ اتنفّذ — constants **v1.4.3** (جدول الكُتّاب + ملحوظة إن مفتاح الإسناد مش موحّد) |
+| ٦ | `ecommoda-order-lifecycle` | `PARTIALLY_FULFILLED` بيتصنّف `CANCELLED` نضيف — **اقتراح فجوة** | MINOR | 🟡 (لو اتقبل) | ✅ اتسجّل — order-lifecycle **v1.2.0** كفجوة **G-14**، و`classifyOrder()` ما اتغيّرتش (قرار أحمد: علّم ماتحركش) |
+| ٧ | `ecommoda-html-builder` | قاعدة ٢٥ (الثيم) بتسمّي استثناء واحد — بقوا **اتنين** | PATCH | ⚪ تحريري | 🔴 **لسه مفتوح** — القاعدة لسه بتقول «استثناء وحيد مقصود: `Bosta Warehouse Return`» |
 
 ---
 
