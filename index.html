@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<!-- skills: html-builder v2.2.0 · worker-builder v1.1.0 · constants v1.4.1 — 01-09-2026 -->
+<!-- skills: html-builder v3.0.0 · worker-builder v1.1.0 · constants v1.4.1 · order-lifecycle v1.1.0 — 01-09-2026 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إلغاء الأوردرات يدويًا — EcomModa</title>
@@ -232,9 +232,10 @@ body {
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 560px) { .grid-2 { grid-template-columns: 1fr; } }
-.info-block { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
-.info-block h4 { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; }
-.info-line { font-size: 13px; line-height: 1.9; }
+.info-block { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; text-align: center; }
+.info-block h4 { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; text-align: center; }
+.info-line { font-size: 13px; line-height: 1.9; text-align: center; }
+.info-line.ltr { direction: ltr; text-align: center; }
 .info-line b { font-weight: 700; }
 
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; border: 1px solid; }
@@ -269,6 +270,11 @@ body {
 .btn-confirm-ok { padding: 8px 18px; background: var(--red); color: #fff; border: none; border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: background .15s; }
 .btn-confirm-ok:hover { background: #b91c1c; }
 .btn-confirm-ok:disabled { opacity: .6; cursor: not-allowed; }
+
+/* شرط الإبلاغ — بيظهر بس لو الأوردر Confirmed أو Ready (اتجهّز/اتطبع فعلاً) */
+.confirm-check { margin: 12px 18px 0; padding: 10px 12px; background: var(--amber-light); border: 1.5px solid #fcd34d; border-radius: var(--radius-sm); }
+.confirm-check label { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 700; color: var(--amber); cursor: pointer; line-height: 1.6; }
+.confirm-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--red); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -306,7 +312,7 @@ body {
       <button class="btn btn-primary" id="searchBtn" onclick="lookupOrder()">🔍 بحث</button>
     </div>
     <div id="searchHint" style="font-size:11.5px;color:var(--text-muted);margin-top:-8px;margin-bottom:4px;">
-      اكتب رقم الأوردر (12345 أو #12345) أو الصق رابط الأوردر من داشبورد شوبيفاي
+      اكتب رقم الأوردر (12345 أو #12345) أو الـ Order ID (7186861523266) أو الصق رابط الأوردر من داشبورد شوبيفاي
     </div>
 
     <div id="orderArea">
@@ -357,6 +363,20 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>البحث بالـ Order ID الطويل (زي 7186861523266) بقى شغّال — قبل كده كان بيقول "لم يتم العثور على الأوردر" والرابط الكامل بس هو اللي بيشتغل (Worker v2.3.0)</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>شرط رابع للإلغاء: الأوردر لازم يكون <b>لم يتم شحنه</b> (UNFULFILLED) — الأوردر المشحون إلغاؤه بيتسجّل RTO مش إلغاء، وحالة الشحن بقت ظاهرة في الـ chips</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>لو الأوردر Confirmed أو Ready: نافذة التأكيد بتطلب إقرار "هل أبلغت مسئول الشحن/المخزن؟" وزرار التنفيذ مقفول من غيره</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>الـ chips بقت بالعربي — حالة الأوردر S1 · حالة الدفع · حالة الشحن · حالة الاسترجاع/الاستبدال</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>بيانات العميل وعنوان الشحن اتوسّطوا داخل المربعات، وسطر الدولة (Egypt) اتشال</span></li>
+          </ul>
+        </div>
+
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v1.0.1</span>
+            <span class="cl-ver-date">01-09-2026</span>
+          </div>
+          <ul class="cl-items">
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>رابط الـ Worker ورابط أداة الموظفين بقوا ثوابت في الكود — اتشالوا من شاشة الإعدادات. الموظف بيدخّل الـ Secret بس</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>الأداة كانت هتطلع بشاشة دخول معطّلة — الـ Worker كان ناقصه endpoint قائمة الموظفين (get_employees)، اتضاف في Worker v2.1.0</span></li>
           </ul>
@@ -394,27 +414,31 @@ body {
             <p><strong>الهدف:</strong> تمكين فريق خدمة العملاء من إلغاء أوردر يدويًا قبل ما يوصل لمرحلة الشحن، بدل الدخول على داشبورد شوبيفاي مباشرة — مع فرض الشروط اللي بتمنع إلغاء أوردر في الوقت أو الحالة الغلط.</p>
             <p><strong>المستخدمون المستهدفون:</strong> فريق خدمة العملاء (Customer Service).</p>
 
-            <h4>شروط الإلغاء — الأربعة لازم يتحققوا كلهم</h4>
+            <h4>شروط الإلغاء — الخمسة لازم يتحققوا كلهم</h4>
             <ol>
-              <li>حالة الأوردر (manual_status) لازم تكون <code>New Order</code> أو <code>Confirmed</code> أو <code>Ready</code></li>
-              <li>حالة الدفع (financial_status) لازم تكون <code>PENDING</code> (لسه ملهوش تحصيل COD)</li>
+              <li>حالة الأوردر S1 (manual_status) لازم تكون <code>New Order</code> أو <code>Confirmed</code> أو <code>Ready</code></li>
+              <li>حالة الدفع (displayFinancialStatus) لازم تكون <code>PENDING</code> — غير مدفوع (لسه ملهوش تحصيل COD)</li>
+              <li>حالة الشحن (displayFulfillmentStatus) لازم تكون <code>UNFULFILLED</code> — لم يتم الشحن. الشرط ده مضاف في Worker v2.3.0: حسب <code>ecommoda-order-lifecycle</code> قاعدة 2، إلغاء أوردر متشحن بيتصنّف <b>RTO</b> في كل تقارير الستاك مش إلغاء — رقم تاني تمامًا. وقاعدة 5 بتقول إن <code>Ready + Fulfilled</code> وضع شرعي (محاولة تسليم مُعادة)، يعني حالة S1 لوحدها ما كانتش بتمنع الحالة دي</li>
               <li>مفيش أي طلب استرجاع/استبدال مفتوح على الأوردر — ده مستحيل عمليًا في المراحل دي أصلًا (S2 بيتفعّل بس بعد Delivered)، وشوبيفاي نفسها بترفض الإلغاء لو فيه return شغّال</li>
               <li>مفيش الأوردر ملغي بالفعل</li>
             </ol>
 
+            <h4>إقرار إبلاغ الشحن/المخزن</h4>
+            <p>لو حالة الأوردر <code>Confirmed</code> أو <code>Ready</code> — يعني اتأكد أو اتجهّز في المخزن فعلاً — نافذة التأكيد بتعرض checkbox: <b>"هل أبلغت مسئول الشحن/المخزن بإلغاء الأوردر قبل تنفيذ الطلب؟"</b>، وزرار التنفيذ بيفضل مقفول لحد ما الموظف يأكّد. الـ Worker بيرفض الطلب كمان لو الإقرار ناقص (دفاع تاني)، والقيمة بتتسجّل في <code>extra.warehouseNotified</code> في D1. <code>New Order</code> مش محتاج الإقرار — الأوردر لسه ما وصلش لحد.</p>
+
             <h4>كيف تعمل — Workflow</h4>
             <ol>
-              <li>الموظف يكتب رقم الأوردر (12345 أو #12345) أو يلصق رابط الأوردر من داشبورد شوبيفاي</li>
-              <li>الأداة تعرض اسم العميل، التليفون، العنوان بالتفصيل، وحالة الأهلية للإلغاء (✅/⛔)</li>
+              <li>الموظف يكتب رقم الأوردر (12345 أو #12345)، أو الـ Order ID الطويل (7186861523266)، أو يلصق رابط الأوردر من داشبورد شوبيفاي</li>
+              <li>الأداة تعرض اسم العميل، التليفون، العنوان بالتفصيل، الـ chips الأربعة (حالة الأوردر S1 · حالة الدفع · حالة الشحن · حالة الاسترجاع/الاستبدال)، وحالة الأهلية للإلغاء (✅/⛔)</li>
               <li>لو مؤهل، الموظف يختار سبب الإلغاء من القائمة (بتتقرأ لايف من ميتافيلد شوبيفاي)</li>
-              <li>ضغط "إلغاء الأوردر" بيفتح نافذة تأكيد نهائية</li>
+              <li>ضغط "إلغاء الأوردر" بيفتح نافذة تأكيد نهائية — وفيها إقرار إبلاغ الشحن/المخزن لو الأوردر Confirmed أو Ready</li>
               <li>بعد التأكيد: الأداة بتلغي الأوردر على شوبيفاي (restock + السبب مسجّل)، وبتتحقق فعليًا إن الإلغاء اتسجّل قبل ما تقول "تم"</li>
             </ol>
 
             <h4>الـ Endpoints الرئيسية</h4>
             <table>
               <tr><th>action</th><th>الوصف</th></tr>
-              <tr><td><code>lookup_order</code></td><td>البحث عن أوردر برقمه/رابطه + جلب قائمة أسباب الإلغاء الحية</td></tr>
+              <tr><td><code>lookup_order</code></td><td>البحث عن أوردر برقمه / الـ Order ID / رابطه + جلب قائمة أسباب الإلغاء الحية. الرقم المجرّد بيتجرّب كـ ID الأول لو ≥ 10 خانات، وكاسم أوردر لو أقصر — والتانية fallback</td></tr>
               <tr><td><code>cancel_order</code></td><td>تنفيذ الإلغاء + restock + تسجيل السبب + تحقق بعدي</td></tr>
               <tr><td><code>diag</code></td><td>فحص صلاحيات شوبيفاي (write_orders / read_returns / write_returns)</td></tr>
               <tr><td><code>get_config</code></td><td>مقارنة نسخة الـ Worker مع الواجهة</td></tr>
@@ -430,6 +454,8 @@ body {
             <ul>
               <li><code>§AUTH</code> — Universal D1 Auth (check_employee / register_pin / verify_employee / log_logout)</li>
               <li><code>§TOOL-JS</code> — بحث الأوردر، عرض الأهلية، اختيار السبب، تأكيد الإلغاء، عرض النتيجة (3 حالات)</li>
+              <li><code>renderOrderCard()</code> — بتحسب الأهلية من 5 شروط وبتبني الـ chips الأربعة. لو الـ Worker أقدم من v2.3.0 وما بعتش <code>canCancelByFulfillmentStatus</code>، بتحسبها محليًا من <code>displayFulfillmentStatus</code> بدل ما تفترض "مسموح"</li>
+              <li><code>openCancelConfirm()</code> / <code>onWarehouseAckChange()</code> — إقرار إبلاغ الشحن/المخزن + قفل زرار التنفيذ</li>
             </ul>
 
             <h4>KEY VARIABLES</h4>
@@ -439,6 +465,8 @@ body {
               <li><code>LS_SECRET = 'order_cancel_worker_secret'</code> — المفتاح الوحيد في localStorage</li>
               <li><code>currentOrder</code> — بيانات آخر أوردر اتبحث عنه، بيتصفّر بعد أي إلغاء ناجح أو logout</li>
               <li><code>liveCancelReasons</code> — قائمة الأسباب اللي جاية من lookup_order، بتتغيّر كل بحث</li>
+              <li><code>WAREHOUSE_ACK_STATUSES = ['Confirmed','Ready']</code> — الحالات اللي بتطلب إقرار الإبلاغ</li>
+              <li><code>FINANCIAL_STATUS_AR</code> · <code>FULFILLMENT_STATUS_AR</code> — ترجمة حالات شوبيفاي، نسخة احتياطية لو الـ Worker أقدم من v2.3.0</li>
             </ul>
 
             <h4>NOTES</h4>
@@ -446,6 +474,8 @@ body {
               <li>مفيش Log Tab في النسخة دي — الـ Worker بيسجّل في D1 عادي (tool=order_cancel) وممكن يتراجع من أداة تانية أو مستقبلًا لو احتجنا تاب سجل هنا</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
               <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها Shopify استلمت طلب الإلغاء لكن ما أكدتش cancelledAt فورًا — راجع الأوردر يدويًا لو استمرت الحالة دي</li>
+              <li>سطر الدولة (Egypt) متشال من عنوان الشحن عمدًا — كل الأوردرات محلية والسطر ما بيضيفش معلومة. لو اتفتح بيع دولي، السطر لازم يرجع</li>
+              <li>الـ chips مبنية على 4 مصادر مختلفة: ميتافيلد <code>custom.manual_status</code> (S1) · <code>displayFinancialStatus</code> · <code>displayFulfillmentStatus</code> · مصفوفة <code>returns</code> — التلاتة الأخيرة من شوبيفاي مباشرة</li>
             </ul>
           </div>
         </details>
@@ -464,6 +494,12 @@ body {
         <button class="modal-close-x" onclick="closeConfirm()">✕</button>
       </div>
       <div class="confirm-modal-body" id="confirmMsg"></div>
+      <div class="confirm-check" id="confirmCheckRow" style="display:none;">
+        <label for="warehouseAckCheck">
+          <input type="checkbox" id="warehouseAckCheck" onchange="onWarehouseAckChange()">
+          <span>هل أبلغت مسئول الشحن/المخزن بإلغاء الأوردر قبل تنفيذ الطلب؟</span>
+        </label>
+      </div>
       <div class="confirm-modal-ftr">
         <button class="btn-modal-cancel" onclick="closeConfirm()">رجوع</button>
         <button class="btn-confirm-ok" id="confirmOkBtn">تأكيد الإلغاء</button>
@@ -534,7 +570,7 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.0.1';
+const TOOL_VERSION = 'v1.1.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -943,6 +979,22 @@ function updateLoginSettingsBtn() {
 let currentOrder = null;
 let liveCancelReasons = [];
 
+// ترجمة حالات شوبيفاي — نسخة احتياطية لو الـ Worker أقدم من v2.3.0 وما بعتش
+// financialStatusAr / fulfillmentStatusAr. المصدر الأساسي دايمًا رد الـ Worker.
+const FINANCIAL_STATUS_AR = {
+  PENDING: 'غير مدفوع', AUTHORIZED: 'محجوز', PARTIALLY_PAID: 'مدفوع جزئيًا', PAID: 'مدفوع',
+  PARTIALLY_REFUNDED: 'مسترجع جزئيًا', REFUNDED: 'مسترجع بالكامل', VOIDED: 'ملغي', EXPIRED: 'منتهي',
+};
+const FULFILLMENT_STATUS_AR = {
+  UNFULFILLED: 'لم يتم الشحن', PARTIALLY_FULFILLED: 'تم شحن جزء منه', FULFILLED: 'تم الشحن',
+  RESTOCKED: 'رجع للمخزن', ON_HOLD: 'موقوف مؤقتًا', SCHEDULED: 'مجدول للشحن',
+  IN_PROGRESS: 'جارٍ التجهيز للشحن', OPEN: 'مفتوح', PENDING_FULFILLMENT: 'في انتظار الشحن',
+};
+
+// الحالات اللي الأوردر فيها بيبقى اتأكد/اتجهّز فعلاً — لازم إقرار إن الشحن/المخزن
+// اتبلّغ قبل الإلغاء. New Order لسه ما وصلش لحد، فمش محتاج الإقرار.
+const WAREHOUSE_ACK_STATUSES = ['Confirmed', 'Ready'];
+
 async function lookupOrder() {
   const input = document.getElementById('orderInput');
   const raw = input.value.trim();
@@ -969,22 +1021,34 @@ async function lookupOrder() {
 function renderOrderCard(order, reasons) {
   const area = document.getElementById('orderArea');
 
+  // حالة الشحن: الـ Worker (v2.3.0+) بيحسبها ويرجّعها. لو الرد جاي من Worker أقدم
+  // الحقل مش موجود خالص — ساعتها بنحسبها هنا من الحالة الخام بدل ما نفترض "مسموح".
+  const fulfillmentOk = (order.canCancelByFulfillmentStatus !== undefined)
+    ? order.canCancelByFulfillmentStatus
+    : (order.displayFulfillmentStatus === 'UNFULFILLED');
+
   const eligible = order.canCancelByManualStatus && order.canCancelByFinancialStatus
-                   && !order.hasOpenReturn && !order.alreadyCancelled;
+                   && fulfillmentOk && !order.hasOpenReturn && !order.alreadyCancelled;
+
+  const finLabel = order.financialStatusAr || FINANCIAL_STATUS_AR[order.displayFinancialStatus]
+                   || order.displayFinancialStatus || 'غير معروفة';
+  const fulLabel = order.fulfillmentStatusAr || FULFILLMENT_STATUS_AR[order.displayFulfillmentStatus]
+                   || order.displayFulfillmentStatus || 'غير معروفة';
 
   const failReasons = [];
   if (order.alreadyCancelled) failReasons.push('الأوردر ملغي بالفعل');
-  if (!order.canCancelByManualStatus) failReasons.push(`حالة الأوردر الحالية "${order.manualStatus || 'فارغة'}" — المسموح: New Order / Confirmed / Ready`);
-  if (!order.canCancelByFinancialStatus) failReasons.push(`حالة الدفع "${order.displayFinancialStatus || 'فارغة'}" — المسموح: PENDING فقط`);
+  if (!order.canCancelByManualStatus) failReasons.push(`حالة الأوردر S1 الحالية "${order.manualStatus || 'فارغة'}" — المسموح: New Order / Confirmed / Ready`);
+  if (!order.canCancelByFinancialStatus) failReasons.push(`حالة الدفع "${finLabel}" — المسموح: غير مدفوع (PENDING) فقط`);
+  if (!fulfillmentOk) failReasons.push(`حالة الشحن "${fulLabel}" — المسموح: لم يتم الشحن (UNFULFILLED) فقط. الأوردر اللي اتشحن فعلاً إلغاؤه بيتسجّل RTO مش إلغاء`);
   if (order.hasOpenReturn) failReasons.push('يوجد طلب استرجاع/استبدال مفتوح على الأوردر');
 
   const addr = order.shippingAddress;
+  // ملاحظة: الدولة (Egypt) متشالة عمدًا — كل الأوردرات محلية والسطر ما بيضيفش معلومة
   const addrHtml = addr ? `
     <div class="info-line"><b>${addr.name || order.customerName || '—'}</b></div>
     <div class="info-line">${addr.address1 || ''} ${addr.address2 || ''}</div>
     <div class="info-line">${addr.city || ''} ${addr.province ? '، ' + addr.province : ''} ${addr.zip || ''}</div>
-    <div class="info-line">${addr.country || ''}</div>
-    <div class="info-line" style="direction:ltr;text-align:left;">📞 ${addr.phone || order.customerPhone || '—'}</div>
+    <div class="info-line ltr">📞 ${addr.phone || order.customerPhone || '—'}</div>
   ` : `<div class="info-line">لا يوجد عنوان شحن مسجّل على الأوردر</div>`;
 
   const reasonOptions = reasons.map(r => `<option value="${r.replace(/"/g,'&quot;')}">${r}</option>`).join('');
@@ -994,9 +1058,10 @@ function renderOrderCard(order, reasons) {
       <div class="order-hdr">
         ${orderLink(order.name, order.numericId)}
         <div class="badge-status-row">
-          <span class="badge ${order.canCancelByManualStatus ? 'badge-ok' : 'badge-bad'}">manual_status: ${order.manualStatus || 'فارغ'}</span>
-          <span class="badge ${order.canCancelByFinancialStatus ? 'badge-ok' : 'badge-bad'}">${order.displayFinancialStatus || 'فارغ'}</span>
-          <span class="badge ${!order.hasOpenReturn ? 'badge-ok' : 'badge-bad'}">${order.hasOpenReturn ? 'استرجاع مفتوح' : 'مفيش استرجاع'}</span>
+          <span class="badge ${order.canCancelByManualStatus ? 'badge-ok' : 'badge-bad'}">حالة الأوردر S1: ${order.manualStatus || 'فارغ'}</span>
+          <span class="badge ${order.canCancelByFinancialStatus ? 'badge-ok' : 'badge-bad'}">حالة الدفع: ${finLabel}</span>
+          <span class="badge ${fulfillmentOk ? 'badge-ok' : 'badge-bad'}">حالة الشحن: ${fulLabel}</span>
+          <span class="badge ${!order.hasOpenReturn ? 'badge-ok' : 'badge-bad'}">${order.hasOpenReturn ? 'يوجد طلب استرجاع/استبدال في الأوردر' : 'لا يوجد طلب استرجاع/استبدال في الأوردر'}</span>
         </div>
       </div>
 
@@ -1009,7 +1074,7 @@ function renderOrderCard(order, reasons) {
         <div class="info-block">
           <h4>بيانات العميل</h4>
           <div class="info-line"><b>${order.customerName || '—'}</b></div>
-          <div class="info-line" style="direction:ltr;text-align:left;">📞 ${order.customerPhone || '—'}</div>
+          <div class="info-line ltr">📞 ${order.customerPhone || '—'}</div>
         </div>
         <div class="info-block">
           <h4>عنوان الشحن</h4>
@@ -1051,17 +1116,39 @@ function openCancelConfirm() {
   const oldBtn = document.getElementById('confirmOkBtn');
   const newBtn = oldBtn.cloneNode(true);
   oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+  // Confirmed / Ready = الأوردر اتأكد أو اتجهّز في المخزن — الإلغاء لازم يكون
+  // مسبوق بإبلاغ مسئول الشحن/المخزن، وإلا القطعة تتشحن بعد الإلغاء.
+  const needsAck = WAREHOUSE_ACK_STATUSES.includes(currentOrder.manualStatus);
+  const checkRow = document.getElementById('confirmCheckRow');
+  const checkBox = document.getElementById('warehouseAckCheck');
+  checkBox.checked = false;
+  checkRow.style.display = needsAck ? '' : 'none';
+  newBtn.disabled = needsAck;   // مقفول لحد ما الموظف يأكّد الإبلاغ
+
   newBtn.addEventListener('click', () => {
+    if (needsAck && !document.getElementById('warehouseAckCheck').checked) {
+      showToast('لازم تأكيد إبلاغ مسئول الشحن/المخزن أولاً', 'error');
+      return;
+    }
     closeConfirm();
-    executeCancelOrder(reasonLabel);
+    executeCancelOrder(reasonLabel, needsAck);
   });
 
   document.getElementById('confirmOverlay').classList.add('open');
 }
+
+// بتتنادى من الـ checkbox — بتقرا الزرار وقت النداء مش وقت التعريف، لأن الزرار
+// بيتستبدل بنسخة نضيفة في كل مرة بتتفتح فيها النافذة.
+function onWarehouseAckChange() {
+  const btn = document.getElementById('confirmOkBtn');
+  if (btn) btn.disabled = !document.getElementById('warehouseAckCheck').checked;
+}
+
 function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); }
 function closeConfirmOnBackdrop(e) { if (e.target === e.currentTarget) closeConfirm(); }
 
-async function executeCancelOrder(reasonLabel) {
+async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
   const resultArea = document.getElementById('resultArea');
   const cancelBtn = document.getElementById('cancelBtn');
   if (cancelBtn) { cancelBtn.disabled = true; cancelBtn.textContent = '⏳ جارٍ الإلغاء...'; }
@@ -1073,6 +1160,7 @@ async function executeCancelOrder(reasonLabel) {
       reasonLabel,
       restock: true,
       notifyCustomer: false,
+      warehouseNotified,   // إقرار الموظف إنه بلّغ الشحن/المخزن — بيتسجّل في D1
       employee: currentEmployee.username,
     });
 

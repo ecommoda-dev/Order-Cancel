@@ -1,8 +1,30 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.2.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
-// skills: worker-builder v1.1.0 · html-builder v2.2.0 · constants v1.4.1 ·
+// TOOL_VERSION: v2.3.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// skills: worker-builder v1.1.0 · html-builder v3.0.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.3.0:
+//   🔴 [إصلاح] البحث برقم الأوردر الطويل (Order ID زي 7186861523266) كان
+//       بيرجّع "لم يتم العثور على الأوردر". parseOrderInput كانت بتعتبر أي رقم
+//       مجرّد **اسم أوردر** وتدوّر بـ name:#7186861523266 — والرابط الكامل بس
+//       هو اللي كان بيشتغل لأن الـ regex بتاعه بيستخرج الـ ID صراحةً. دلوقتي
+//       الدالة بترجّع **قايمة محاولات مرتّبة** (ID الأول لو الرقم ≥ 10 خانات،
+//       الاسم الأول لو أقصر) والـ handler بيجرّبهم بالترتيب.
+//   🔴 [جديد] شرط رابع للإلغاء: displayFulfillmentStatus لازم UNFULFILLED.
+//       قبل كده الأداة كانت بتقرا الحقل ومش بتستخدمه خالص، فأوردر متشحن
+//       (Ready + Fulfilled — وضع شرعي حسب order-lifecycle قاعدة 5) كان ينفع
+//       يتلغي منها، والنتيجة بتتصنّف RTO في كل تقارير الستاك مش إلغاء
+//       (order-lifecycle قاعدة 2). الشرط بيتفحص في lookup_order وتاني في
+//       cancel_order قبل التنفيذ.
+//   🟡 [جديد] إقرار إبلاغ الشحن/المخزن (warehouseNotified) إلزامي لما
+//       manual_status = Confirmed أو Ready. الواجهة بتعرضه كـ checkbox في نافذة
+//       التأكيد وبتقفل زرار التنفيذ من غيره، والـ Worker بيرفض الطلب لو الإقرار
+//       ناقص (دفاع تاني، نفس منطق إعادة فحص manual_status). القيمة بتتسجّل في
+//       extra في D1 مع fulfillmentStatusBefore.
+//   ⚪ [جديد] financialStatusAr / fulfillmentStatusAr — ترجمة الحالات للعربي
+//       عشان الواجهة تعرضها في الـ chips من غير ما تخترع قاموس تاني.
+//   ⚪ [جديد] lookup_order بيرجّع matchedBy ("id" | "name").
 //
 // CHANGELOG v2.2.0:
 //   🟡 [تغيير] REASON_ENUM_MAP اتشال بالكامل. كل إلغاء بيترفع لشوبيفاي بـ
@@ -58,7 +80,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.2.0";
+const WORKER_VERSION = "2.3.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -67,6 +89,44 @@ const ALLOWED_ORIGINS = [
 
 const ALLOWED_MANUAL_STATUS = new Set(["New Order", "Confirmed", "Ready"]);
 const ALLOWED_FINANCIAL_STATUS = new Set(["PENDING"]);
+
+// شرط رابع — الأوردر لازم يكون لسه ما اتشحنش.
+// السبب مش شكلي: ecommoda-order-lifecycle قاعدة 2 بتقول إن
+//   cancelledAt ≠ null + displayFulfillmentStatus = UNFULFILLED → CANCELLED
+//   cancelledAt ≠ null + displayFulfillmentStatus = FULFILLED   → RTO
+// يعني إلغاء أوردر متشحن بيتحوّل في كل تقارير الستاك لـ RTO مش إلغاء، وده رقم
+// تاني تمامًا (بضاعة اتحركت وراجعة، مش أوردر مات في المخزن). وقاعدة 5 بتقول إن
+// Ready + Fulfilled وضع شرعي (محاولة تسليم مُعادة) — يعني manual_status لوحده
+// مش كافي يمنع الحالة دي. الشرط ده هو اللي بيمنعها.
+const ALLOWED_FULFILLMENT_STATUS = new Set(["UNFULFILLED"]);
+
+// الحالات اللي الأوردر فيها بيبقى اتأكد أو اتجهّز في المخزن — الإلغاء فيها لازم
+// يكون مسبوق بإبلاغ مسئول الشحن/المخزن. New Order لسه ما وصلش لحد.
+const WAREHOUSE_ACK_STATUSES = new Set(["Confirmed", "Ready"]);
+
+// الحالات المسموحة بالعربي — الواجهة بتعرضها في الـ chips وفي أسباب الرفض
+const FINANCIAL_STATUS_AR = {
+  PENDING:             "غير مدفوع",
+  AUTHORIZED:          "محجوز",
+  PARTIALLY_PAID:      "مدفوع جزئيًا",
+  PAID:                "مدفوع",
+  PARTIALLY_REFUNDED:  "مسترجع جزئيًا",
+  REFUNDED:            "مسترجع بالكامل",
+  VOIDED:              "ملغي",
+  EXPIRED:             "منتهي",
+};
+
+const FULFILLMENT_STATUS_AR = {
+  UNFULFILLED:         "لم يتم الشحن",
+  PARTIALLY_FULFILLED: "تم شحن جزء منه",
+  FULFILLED:           "تم الشحن",
+  RESTOCKED:           "رجع للمخزن",
+  ON_HOLD:             "موقوف مؤقتًا",
+  SCHEDULED:           "مجدول للشحن",
+  IN_PROGRESS:         "جارٍ التجهيز للشحن",
+  OPEN:                "مفتوح",
+  PENDING_FULFILLMENT: "في انتظار الشحن",
+};
 
 // كل الإلغاءات بتترفع لشوبيفاي بسبب واحد ثابت: OTHER.
 // قرار أحمد 01-09-2026 — جدول التصنيف (REASON_ENUM_MAP) اتشال بالكامل.
@@ -260,19 +320,42 @@ function moneyText(set) {
 }
 
 // ─── §CANCEL::parseOrderInput ───
-// يقبل: "12345" / "#12345" / رابط Admin كامل (…/orders/12345 أو …/orders/#12345)
+// بيرجّع **قايمة محاولات مرتّبة** — مش محاولة واحدة.
+// السبب: "53032" و"7186861523266" الاتنين أرقام مجرّدة، بس الأول اسم أوردر
+// والتاني Order ID. الفارق الوحيد المتاح قبل ما نسأل شوبيفاي هو الطول، فبنرتّب
+// المحاولات بالأرجح وبنجرّب التانية لو الأولى ما لقتش — مفيش تخمين صامت ومفيش
+// إدخال صحيح بيرجع "لم يتم العثور على الأوردر".
+//   بيقبل: 12345 · #12345 · 7186861523266 · رابط أدمن كامل (…/orders/7186861523266)
+const ORDER_ID_MIN_DIGITS = 10;   // أسماء الأوردرات هنا 5 أرقام · الـ IDs 13
+
 function parseOrderInput(raw) {
   const val = String(raw || "").trim();
   if (!val) return null;
 
+  // رابط أدمن — الرقم اللي بعد /orders/ هو الـ ID دايمًا، مفيش لبس
   const urlMatch = val.match(/\/orders\/(#?\d+)/i);
   if (urlMatch) {
-    const seg = urlMatch[1].replace(/^#/, "");
-    return { type: "id", value: seg };
+    return { input: val, candidates: [{ type: "id", value: urlMatch[1].replace(/^#/, "") }] };
   }
   if (/^https?:\/\//i.test(val)) return null; // رابط مش متعرّف عليه
 
-  return { type: "name", value: normalizeOrderName(val) };
+  const cleaned = val.replace(/\s+/g, "");
+
+  // الـ # تصريح صريح إن ده اسم أوردر — مش محتاج تخمين
+  if (cleaned.startsWith("#")) {
+    return { input: val, candidates: [{ type: "name", value: normalizeOrderName(cleaned) }] };
+  }
+
+  if (/^\d+$/.test(cleaned)) {
+    const asId   = { type: "id",   value: cleaned };
+    const asName = { type: "name", value: normalizeOrderName(cleaned) };
+    return {
+      input: val,
+      candidates: cleaned.length >= ORDER_ID_MIN_DIGITS ? [asId, asName] : [asName, asId],
+    };
+  }
+
+  return { input: val, candidates: [{ type: "name", value: normalizeOrderName(cleaned) }] };
 }
 
 function mapOrderNode(order) {
@@ -309,6 +392,9 @@ function mapOrderNode(order) {
     cancelManualReason,
     canCancelByManualStatus: ALLOWED_MANUAL_STATUS.has(manualStatus),
     canCancelByFinancialStatus: ALLOWED_FINANCIAL_STATUS.has(order.displayFinancialStatus),
+    canCancelByFulfillmentStatus: ALLOWED_FULFILLMENT_STATUS.has(order.displayFulfillmentStatus),
+    financialStatusAr: FINANCIAL_STATUS_AR[order.displayFinancialStatus] || "",
+    fulfillmentStatusAr: FULFILLMENT_STATUS_AR[order.displayFulfillmentStatus] || "",
     hasOpenReturn: openReturns.length > 0,
     alreadyCancelled: !!order.cancelledAt,
     fulfillmentsCount: Array.isArray(order.fulfillments) ? order.fulfillments.length : 0,
@@ -452,11 +538,15 @@ async function handleLookupOrder(request, env) {
 
   const token = await getAccessToken(env);
 
-  let order = null;
-  if (parsed.type === "id") {
-    order = await getOrderById(env, token, `gid://shopify/Order/${parsed.value}`);
-  } else {
-    order = await findOrderByName(env, token, parsed.value);
+  // بنجرّب المحاولات بالترتيب — أول واحدة بترجّع أوردر هي اللي بتتعرض.
+  // ما بنوقفش عند أول فشل: "7186861523266" ممكن يكون ID، و"53032" ممكن يكون اسم،
+  // والاتنين أرقام مجرّدة شكلًا.
+  let order = null, matchedBy = null;
+  for (const cand of parsed.candidates) {
+    order = cand.type === "id"
+      ? await getOrderById(env, token, `gid://shopify/Order/${cand.value}`)
+      : await findOrderByName(env, token, cand.value);
+    if (order) { matchedBy = cand.type; break; }
   }
   if (!order) return json({ ok: false, error: `لم يتم العثور على الأوردر` }, 404, request);
 
@@ -471,8 +561,10 @@ async function handleLookupOrder(request, env) {
   return json({
     ok: true,
     order,
+    matchedBy, // "id" | "name" — إزاي الأداة لقت الأوردر من اللي المستخدم كتبه
     allowedManualStatuses: Array.from(ALLOWED_MANUAL_STATUS),
     allowedFinancialStatuses: Array.from(ALLOWED_FINANCIAL_STATUS),
+    allowedFulfillmentStatuses: Array.from(ALLOWED_FULFILLMENT_STATUS),
     cancelReasons, // array of strings — مش object زي القديم
   }, 200, request);
 }
@@ -482,7 +574,8 @@ async function handleCancelOrder(request, env) {
   const body = await request.json().catch(() => null);
   if (!body) return badRequest("Body غير صالح", request);
 
-  const { orderId, reasonLabel, restock = true, notifyCustomer = false, employee } = body;
+  const { orderId, reasonLabel, restock = true, notifyCustomer = false, employee,
+          warehouseNotified = false } = body;
 
   if (!employee) return badRequest("بيانات الموظف ناقصة — اعمل Login مرة أخرى", request);
   if (!orderId || !String(orderId).startsWith("gid://shopify/Order/")) {
@@ -516,6 +609,24 @@ async function handleCancelOrder(request, env) {
       request
     );
   }
+  if (!ALLOWED_FULFILLMENT_STATUS.has(orderBefore.displayFulfillmentStatus)) {
+    return badRequest(
+      `غير مسموح بإلغاء الأوردر لأن حالة الشحن = "${orderBefore.displayFulfillmentStatus || "فارغ"}". ` +
+      `المسموح فقط: UNFULFILLED — الأوردر اللي اتشحن فعلاً إلغاؤه بيتسجّل RTO مش إلغاء ` +
+      `(ecommoda-order-lifecycle قاعدة 2)`,
+      request
+    );
+  }
+  // Confirmed / Ready = الأوردر اتأكد أو اتجهّز في المخزن فعلاً. الإلغاء من غير
+  // إبلاغ مسئول الشحن/المخزن بيسيب قطعة متجهّزة تتشحن بعد الإلغاء. الواجهة بتمنعها
+  // بـ checkbox، والفحص ده هو الدفاع التاني — نفس منطق فحص manual_status فوق.
+  if (WAREHOUSE_ACK_STATUSES.has(orderBefore.manualStatus) && !warehouseNotified) {
+    return badRequest(
+      `الأوردر في حالة "${orderBefore.manualStatus}" — لازم تأكيد إبلاغ مسئول الشحن/المخزن قبل الإلغاء`,
+      request
+    );
+  }
+
   // دفاع إضافي — عمليًا مستحيل يحصل على أوردر لسه ما اتوصلش لـ Delivered،
   // لكن شوبيفاي نفسها كمان بترفض orderCancel لو فيه return شغّال.
   if (orderBefore.hasOpenReturn) {
@@ -542,6 +653,8 @@ async function handleCancelOrder(request, env) {
       extra: {
         orderGid: orderId, manualStatusBefore: orderBefore.manualStatus,
         reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
+        warehouseNotified: !!warehouseNotified,
+        fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
         job, metafield, confirmed,
       },
     });
@@ -562,6 +675,8 @@ async function handleCancelOrder(request, env) {
       extra: {
         orderGid: orderId, manualStatusBefore: orderBefore.manualStatus,
         reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
+        warehouseNotified: !!warehouseNotified,
+        fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
         error: err.message,
       },
     }).catch(() => {});
@@ -606,6 +721,7 @@ function handleGetConfig(request) {
     allowedOrigins: ALLOWED_ORIGINS,
     allowedManualStatuses: Array.from(ALLOWED_MANUAL_STATUS),
     allowedFinancialStatuses: Array.from(ALLOWED_FINANCIAL_STATUS),
+    allowedFulfillmentStatuses: Array.from(ALLOWED_FULFILLMENT_STATUS),
   }, 200, request);
 }
 
