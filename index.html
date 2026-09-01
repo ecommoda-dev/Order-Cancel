@@ -21,9 +21,17 @@
   --text-primary:   #111827;
   --text-secondary: #6b7280;
   --text-muted:     #6b7280;
-  --accent:         #2563eb;
-  --accent-light:   #eff6ff;
-  --accent-dark:    #1d4ed8;
+  /* ⚠️ ثيم أحمر — استثناء مقصود لهذه الأداة وحدها (قرار أحمد 01-09-2026).
+     السبب تشغيلي مش جمالي: دي الأداة الوحيدة في الستاك اللي بتعمل فعل **لا رجعة
+     فيه** على أوردر حقيقي، والموظف بيقفز بينها وبين أدوات تانية شكلها متطابق.
+     اللون بيقوله بصريًا "إنت في أداة الإلغاء" قبل ما يبص على العنوان.
+     طريقة التطبيق = المنصوص عليها في ecommoda-html-builder →
+     references/design-system.md (استثناء Bosta Warehouse Return): **override
+     للـ accent بس** — باقي المتغيّرات زي ما هي بالحرف. --red و--red-light
+     ما اتغيّروش، فبانرات الخطأ والفشل لسه بلونها المعياري. */
+  --accent:         #dc2626;
+  --accent-light:   #fef2f2;
+  --accent-dark:    #991b1b;
   --green:          #16a34a;
   --green-light:    #f0fdf4;
   --green-border:   #86efac;
@@ -78,8 +86,8 @@ body {
 .hbtn:hover    { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .hbtn:disabled { opacity: .5; cursor: not-allowed; }
 .hbtn.settings-configured { border-color: var(--green); color: var(--green); background: var(--green-light); }
-.hbtn.ver-btn { border-color: #bfdbfe; color: #1d4ed8; background: #eff6ff; font-family: var(--font-mono); font-weight: 700; }
-.hbtn.ver-btn:hover { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+.hbtn.ver-btn { border-color: #fecaca; color: #b91c1c; background: #fef2f2; font-family: var(--font-mono); font-weight: 700; }
+.hbtn.ver-btn:hover { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
 .hbtn.active-user   { border-color: var(--green); color: var(--green); background: var(--green-light); }
 .hbtn.active-user:hover { border-color: var(--red); color: var(--red); background: var(--red-light); }
 .hbtn.warn { border-color: var(--amber); color: var(--amber); background: var(--amber-light); }
@@ -96,7 +104,7 @@ body {
 .settings-field  { display: flex; flex-direction: column; gap: 5px; }
 .settings-label  { font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .5px; }
 .settings-input  { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 9px 11px; font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); outline: none; width: 100%; direction: ltr; background: var(--surface); transition: border-color .15s; }
-.settings-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.settings-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(220,38,38,.08); }
 .settings-modal-ftr { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
 .btn-modal-cancel { padding: 8px 14px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; cursor: pointer; }
 .btn-modal-cancel:hover { color: var(--text-primary); }
@@ -112,7 +120,7 @@ body {
 
 .cl-version-block { margin-bottom: 4px; }
 .cl-version-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.cl-ver-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; direction: ltr; }
+.cl-ver-badge { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 5px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; direction: ltr; }
 .cl-ver-badge.old { background: var(--surface-2); color: var(--text-secondary); border-color: var(--border-strong); }
 .cl-ver-date { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); direction: ltr; }
 .cl-items { list-style: none; display: flex; flex-direction: column; gap: 5px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
@@ -161,7 +169,7 @@ body {
 .login-field { display: flex; flex-direction: column; gap: 7px; }
 .login-field label { display: block; font-size: 11px; font-weight: 800; color: var(--text-secondary); letter-spacing: .3px; }
 .login-field select { width: 100%; height: 58px; border: 1.5px solid var(--border-strong); border-radius: 10px; background: var(--surface); color: var(--text-primary); font-family: var(--font); font-size: 14px; font-weight: 600; outline: none; padding: 0 14px; transition: border-color .15s, box-shadow .15s; }
-.login-field select:focus    { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.login-field select:focus    { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(220,38,38,.08); }
 .login-field select:disabled { opacity: .68; cursor: not-allowed; background: var(--surface-2); }
 .login-status { min-height: 18px; font-size: 12px; font-weight: 700; color: var(--text-muted); line-height: 1.5; }
 .login-status.info  { color: var(--accent); }
@@ -204,14 +212,17 @@ body {
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
 .search-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .field-input { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-family: inherit; font-size: 13.5px; color: var(--text-primary); background: var(--surface); outline: none; width: 100%; transition: border-color .15s; }
-.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.field-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(220,38,38,.08); }
 .field-input.has-value { border-color: var(--accent); background: var(--accent-light); }
 
 .btn { padding: 10px 18px; border-radius: var(--radius-sm); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; border: none; transition: all .15s; white-space: nowrap; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
-.btn-danger { background: var(--red); color: #fff; }
+/* الزرار المدمّر: بعد ما بقى الثيم كله أحمر، --red لوحده مابقاش بيميّزه عن
+   الأزرار العادية. بيتميّز بإطار غامق + خط أعرض — مش بلون تاني، عشان
+   يفضل واضح إنه هو الفعل الخطر. */
+.btn-danger { background: var(--red); color: #fff; border: 2px solid #7f1d1d; font-weight: 800; box-shadow: 0 2px 8px rgba(220,38,38,.28); }
 .btn-danger:hover:not(:disabled) { background: #b91c1c; }
 .btn-outline { background: var(--surface); border: 1.5px solid var(--border-strong); color: var(--text-secondary); }
 .btn-outline:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
@@ -247,11 +258,28 @@ body {
 .reason-field { display: flex; flex-direction: column; gap: 6px; }
 .reason-field label { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
 .reason-select { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-family: inherit; font-size: 13.5px; color: var(--text-primary); background: var(--surface); outline: none; width: 100%; }
-.reason-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.08); }
+.reason-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(220,38,38,.08); }
 
 .actions-row { display: flex; gap: 8px; justify-content: flex-end; }
 
 .result-banner { border-radius: var(--radius-sm); padding: 14px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+
+/* ── §TOOL::resultStep — خطوة النتيجة المنفصلة ──
+   بعد إلغاء تم فعلاً، الشاشة بتتبدّل بالكامل: البحث وبطاقة الأوردر بيختفوا
+   وتفضل النتيجة لوحدها. السبب مش جمالي — الأوردر بقى ملغي، وأي حاجة تانية
+   لسه معروضة على الشاشة (بيانات العميل، قائمة الأسباب، مربع البحث بالرقم
+   القديم) بتدّي إحساس إن الشاشة لسه شغّالة على نفس الأوردر. الرجوع بيبقى
+   بفعل صريح واحد: زرار "إلغاء أوردر آخر؟". */
+.result-step-hdr { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.result-step-ttl { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; }
+.result-step-order { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); }
+.result-step .result-banner { margin-top: 0; }
+.result-step-actions { display: flex; justify-content: center; margin-top: 16px; }
+.btn-again { display: flex; align-items: center; gap: 7px; padding: 12px 26px; border: none;
+  border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-family: inherit;
+  font-size: 14px; font-weight: 800; cursor: pointer; transition: background .15s; }
+.btn-again:hover { background: var(--accent-dark); }
 .result-banner.success { background: var(--green-light); border: 1.5px solid var(--green-border); }
 .result-banner.warning { background: var(--amber-light); border: 1.5px solid #fcd34d; }
 .result-banner.error   { background: var(--red-light); border: 1.5px solid var(--red-border); }
@@ -305,7 +333,7 @@ body {
   color: var(--text-secondary); cursor: pointer; transition: all .15s; display: flex; align-items: center;
   justify-content: center; gap: 6px; white-space: nowrap; }
 .main-tab-btn:hover { background: var(--surface-2); color: var(--text-primary); }
-.main-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
+.main-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(220,38,38,.25); }
 .sticky-header-wrap.stuck .main-tabs-bar { max-height: 0 !important; opacity: 0; padding: 0; margin-bottom: 0; border-width: 0; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
@@ -363,7 +391,7 @@ body {
 .search-input { width: 100%; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
   padding: 8px 12px 8px 34px; font-family: inherit; font-size: 13px; height: 36px; box-sizing: border-box;
   outline: none; background: var(--surface); transition: border-color .15s, background .15s; }
-.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(220,38,38,.08); }
 .search-input.has-value { border-color: var(--accent); background: var(--accent-light); }
 .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); pointer-events: none; }
 
@@ -371,7 +399,7 @@ body {
 .date-input { width: 160px; height: 34px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
   padding: 6px 10px; font-family: inherit; font-size: 12px; color: var(--text-primary); background: var(--surface);
   outline: none; box-sizing: border-box; cursor: pointer; }
-.date-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.date-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(220,38,38,.08); }
 .date-input.has-value { border-color: var(--accent); background: var(--accent-light); }
 .preset-wrap { position: relative; }
 .preset-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border-strong);
@@ -402,7 +430,7 @@ body {
   cursor: pointer; transition: all .15s; white-space: nowrap; }
 .ms-btn:hover { border-color: var(--accent); }
 .ms-btn.has-selection { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-light); }
-.ms-btn.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.ms-btn.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(220,38,38,.08); }
 .ms-btn .ms-count { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: #fff;
   background: var(--accent); border-radius: 20px; padding: 1px 7px; min-width: 18px; text-align: center; }
 .ms-btn .ms-arrow { font-size: 9px; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
@@ -433,8 +461,8 @@ body {
 .ms-chips-row:empty { display: none; }
 .chips-label { font-size: 11.5px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
 .ms-chip { display: flex; align-items: center; gap: 5px; background: var(--accent-light); color: var(--accent-dark);
-  border: 1px solid #bfdbfe; border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600; }
-.ms-chip button { border: none; background: rgba(37,99,235,.15); color: var(--accent-dark); width: 16px; height: 16px;
+  border: 1px solid #fecaca; border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600; }
+.ms-chip button { border: none; background: rgba(220,38,38,.15); color: var(--accent-dark); width: 16px; height: 16px;
   border-radius: 50%; font-size: 11px; cursor: pointer; line-height: 1; font-family: inherit; }
 .ms-chip button:hover { background: var(--accent); color: #fff; }
 
@@ -539,7 +567,9 @@ body {
        §TOOL-CONTENT
        ══════════════════════════════════════════════════════════ -->
   <div class="tab-panel active" id="panelMain">
-  <div class="card">
+
+  <!-- ─── §TOOL::searchStep — الخطوة الأولى: بحث + بطاقة الأوردر + الإلغاء ─── -->
+  <div class="card" id="searchStep">
     <div class="search-row">
       <input type="text" class="field-input" id="orderInput"
              oninput="toggleSearchActiveState(this)"
@@ -553,7 +583,20 @@ body {
     <div id="orderArea">
       <div class="empty-state">ابحث عن أوردر للبدء</div>
     </div>
-  </div>
+  </div><!-- /#searchStep -->
+
+  <!-- ─── §TOOL::resultStep — الخطوة التانية: النتيجة لوحدها + زرار الرجوع ─── -->
+  <div class="card result-step" id="resultStep" style="display:none;">
+    <div class="result-step-hdr">
+      <div class="result-step-ttl">📄 نتيجة العملية</div>
+      <div class="result-step-order" id="resultStepOrder"></div>
+    </div>
+    <div id="resultStepBody"></div>
+    <div class="result-step-actions">
+      <button class="btn-again" onclick="resetToSearch()">🔄 إلغاء أوردر آخر؟</button>
+    </div>
+  </div><!-- /#resultStep -->
+
   </div><!-- /#panelMain -->
 
   <!-- ══════════════════════════════════════════════════════════
@@ -623,6 +666,27 @@ body {
               </div>
             </div>
           </div>
+
+          <div class="flt-g">
+            <span class="flt-lbl">سبب الإلغاء</span>
+            <div class="ms-wrap" id="msWrap-reason">
+              <button class="ms-btn" id="msBtn-reason" data-default-label="كل الأسباب" onclick="msToggle('reason')">
+                <span id="msBtnLabel-reason">كل الأسباب</span><span class="ms-arrow">▾</span>
+              </button>
+              <div class="ms-menu" id="msMenu-reason">
+                <div class="ms-ftr-top">
+                  <button class="ms-ftr-clear" onclick="msClear('reason')">مسح الاختيار</button>
+                  <span class="ms-ftr-count" id="msFtrCount-reason"></span>
+                </div>
+                <div class="ms-selectall-row" onclick="msToggleSelectAll('reason')">
+                  <input type="checkbox" id="msSelectAll-reason" onclick="event.stopPropagation()"
+                         onchange="msToggleSelectAll('reason', this.checked)">
+                  <span id="msSelectAllLabel-reason">تحديد الكل</span>
+                </div>
+                <div class="ms-list" id="msList-reason"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- صف 2 — بحث ← فترة سريعة ← من ← إلى -->
@@ -672,6 +736,7 @@ body {
         <!-- صف 3+ — chips: سطر منفصل لكل فلتر، واسم الفلتر مرة واحدة في أوله -->
         <div class="ms-chips-row" id="chipsRow-emp"></div>
         <div class="ms-chips-row" id="chipsRow-type"></div>
+        <div class="ms-chips-row" id="chipsRow-reason"></div>
         <div class="ms-chips-row" id="chipsRow-date"></div>
       </div>
 
@@ -766,6 +831,9 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>فلتر "سبب الإلغاء" في تاب السجل</b> — اختيار متعدد زي باقي الفلاتر، والقائمة بتتقرا من <b>السجل نفسه</b> (<code>get_log_reasons</code>) مش من شوبيفاي: سبب اتشال من تعريف الميتافيلد يفضل قابل للفلترة لأن صفوفه لسه موجودة، وسبب جديد لسه ما اتستخدمش مايظهرش. الفلترة <b>server-side</b> زي باقي الفلاتر — فالعدّاد والترقيم والتصدير بيقولوا نفس الرقم</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>النتيجة بقت خطوة منفصلة.</b> بعد إلغاء اتنفّذ فعلاً، البحث وبطاقة الأوردر بيختفوا وتفضل النتيجة لوحدها، والرجوع بزرار واحد صريح: <b>🔄 إلغاء أوردر آخر؟</b> — بيرجّع الأداة لوضعها الأول خالص (مفيش أوردر ولا سبب ولا نتيجة، ومربع البحث فاضي وفيه فوكس). الفشل ✗ بيفضل في مكانه عشان الموظف يعيد المحاولة</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>ثيم الأداة بقى أحمر</b> — استثناء مقصود لهذه الأداة وحدها: دي الأداة الوحيدة اللي بتعمل فعل لا رجعة فيه على أوردر حقيقي، واللون بيقول للموظف بصريًا "إنت في أداة الإلغاء" قبل ما يبص على العنوان. زرار الإلغاء نفسه اتميّز بإطار غامق عشان يفضل واضح إنه هو الفعل الخطر وسط ثيم أحمر</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>التصدير كان بيتقص عند 2000 صف في السكوت</b> — الرسالة كانت "تم تصدير 2000 عملية ✓" والملف ناقص. دلوقتي بانر تحذير ثابت فوق الجدول بيقول كام صف اتصدّر من أصل كام</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الأداة بقت بتحدّث حالة الأوردر S1 إلى <code>Cancelled</code></b> مع كل إلغاء مؤكَّد — أكشن جديد. الانتقال بيتفحص الأول، والتغيير بيتسجّل في D1 بالقيمة قبل وبعد</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>سطر <b>"ما تم فعليًا"</b> تحت نتيجة الإلغاء — بيعدّد اللي حصل فعلاً خطوة خطوة (الإلغاء + الاسترجاع · السبب · التأكيد · تحديث S1)، وبيظهر حتى لو العملية فشلت في النص</span></li>
@@ -852,7 +920,7 @@ body {
             </ol>
 
             <h4>تاب سجل العمليات</h4>
-            <p>جدول بمعيار <code>data-table-standard</code>: أعمدة التاريخ · الوقت · الموظف · نوع العملية · الأوردر (لينك لشوبيفاي) · سبب الإلغاء · النتيجة · ملاحظات. الفلاتر كلها <b>اختيار متعدد</b> (الموظف · نوع العملية) + فترة + بحث، والترتيب على الأعمدة مستقل تمامًا عن الفلاتر (3 حالات: تصاعدي → تنازلي → بلا ترتيب).</p>
+            <p>جدول بمعيار <code>data-table-standard</code>: أعمدة التاريخ · الوقت · الموظف · نوع العملية · الأوردر (لينك لشوبيفاي) · سبب الإلغاء · النتيجة · ملاحظات. الفلاتر كلها <b>اختيار متعدد</b> (الموظف · نوع العملية · سبب الإلغاء) + فترة + بحث، والترتيب على الأعمدة مستقل تمامًا عن الفلاتر (3 حالات: تصاعدي → تنازلي → بلا ترتيب).</p>
             <p><b>الفلترة كلها server-side</b> — يعني عدّاد "النتائج" وترقيم الصفحات بيوصفوا <b>كل</b> الصفوف المطابقة في D1، مش الصفحة المعروضة بس. التصدير كمان بينزّل كل المطابق (لحد 2000 صف)، مش الصفحة الحالية. <code>login</code> و<code>logout</code> مستبعدين في الـ SQL نفسه.</p>
 
             <h4>⚙️ إجراءات الإلغاء — الترتيب والشروط</h4>
@@ -874,9 +942,10 @@ body {
               <tr><td><code>diag</code></td><td>فحص صلاحيات شوبيفاي (write_orders / read_returns / write_returns)</td></tr>
               <tr><td><code>get_config</code></td><td>مقارنة نسخة الـ Worker مع الواجهة</td></tr>
               <tr><td><code>get_employees</code></td><td>قائمة الموظفين النشطين — بتملا قائمة شاشة الدخول <b>وفلتر الموظف في تاب السجل</b> (نفس المصدر، مفيش قائمة تانية)</td></tr>
-              <tr><td><code>get_logs</code></td><td>صفحة واحدة من السجل (100 صف) — فلترة server-side بالكامل: موظفين · أنواع · بحث · فترة</td></tr>
+              <tr><td><code>get_logs</code></td><td>صفحة واحدة من السجل (100 صف) — فلترة server-side بالكامل: موظفين · أنواع · <b>أسباب</b> · بحث · فترة</td></tr>
               <tr><td><code>get_logs_count</code></td><td>عدد الصفوف المطابقة للفلتر — بيغذّي شبشة "النتائج" وترقيم الصفحات</td></tr>
               <tr><td><code>get_logs_export</code></td><td>كل الصفوف المطابقة (لحد 2000) — للتصدير بس، مش الصفحة الحالية</td></tr>
+              <tr><td><code>get_log_reasons</code></td><td>أسباب الإلغاء الموجودة في السجل (<code>DISTINCT</code> من D1) — بتملا فلتر "سبب الإلغاء". <b>مش</b> من شوبيفاي عن قصد، و<b>مش</b> متفلترة بباقي الفلاتر عشان الخيارات ما تختفيش أثناء الفلترة</td></tr>
             </table>
           </div>
         </details>
@@ -893,6 +962,9 @@ body {
               <li><code>§TABS-JS</code> — التابات الرئيسية + تثبيت الهيدر عند السكرول (عتبتان + rAF throttle، منعًا للفليكر)</li>
               <li><code>§DATETIME</code> — <code>toCairo</code> · <code>formatDate</code> · <code>formatTimeOnly</code> · <code>formatDateForExport</code> · <code>formatTimeForExport</code></li>
               <li><code>§LOG-JS</code> — تاب السجل: multi-select · فلتر الفترة · البحث · الترتيب · الترقيم · التصدير</li>
+              <li><code>showResultStep()</code> / <code>resetToSearch()</code> — خطوة النتيجة المنفصلة: الأولى بتخفي <code>#searchStep</code> وتعرض <code>#resultStep</code> (و<code>currentOrder</code> بيفضل زي ما هو عشان زرار التحقق)، والتانية بترجّع الأداة للوضع الأول خالص وبتتنادى كمان من <code>doLogout()</code></li>
+              <li><code>loadLogReasons()</code> — بتملا فلتر "سبب الإلغاء" من <code>get_log_reasons</code>. بتتنادى بعد الدخول وكل مرة يتفتح فيها تاب السجل، فسبب جديد بيبان في الفلتر من غير refresh</li>
+              <li><code>jsAttr()</code> / <code>htmlText()</code> — هروب قيم الفلاتر داخل <code>onclick</code> وداخل النص. الأسباب نص حر من شوبيفاي، و<code>'</code> واحدة كانت هتكسر الـ handler في السكوت (الزرار موجود ومش بيعمل حاجة)</li>
               <li><code>recheckCancelStatus()</code> — تحقق يدوي من البانر الأصفر عبر <code>lookup_order</code>، بيحوّله لأخضر لو <code>alreadyCancelled</code>. ما بيحوّلوش لأحمر أبدًا — الـ Job ممكن يكون لسه شغال</li>
             </ul>
 
@@ -901,12 +973,12 @@ body {
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط</li>
               <li><code>WORKER_URL</code> · <code>ADMIN_WORKER_URL</code> — ثوابت في §CONFIG (مش إعدادات ولا localStorage) — Standards #28</li>
               <li><code>LS_SECRET = 'order_cancel_worker_secret'</code> — المفتاح الوحيد في localStorage</li>
-              <li><code>MIN_WORKER_VERSION = '2.5.0'</code> — أقل نسخة Worker الصفحة بتشتغل معاها (الصفحة معتمدة على <code>get_logs_count</code> / <code>get_logs_export</code>). <b>مالهاش علاقة بـ <code>TOOL_VERSION</code></b> — أي endpoint جديد الصفحة تعتمد عليه لازم يرفعها في نفس التسليم</li>
-              <li><code>currentOrder</code> — بيانات آخر أوردر اتبحث عنه، بيتصفّر بعد أي إلغاء ناجح أو logout</li>
+              <li><code>MIN_WORKER_VERSION = '2.8.0'</code> — أقل نسخة Worker الصفحة بتشتغل معاها (الصفحة معتمدة على <code>get_log_reasons</code> وعلى باراميتر <code>reasons</code>، الاتنين من Worker v2.8.0). <b>مالهاش علاقة بـ <code>TOOL_VERSION</code></b> — أي endpoint جديد الصفحة تعتمد عليه لازم يرفعها في نفس التسليم</li>
+              <li><code>currentOrder</code> — بيانات آخر أوردر اتبحث عنه. <b>بيفضل موجود طول ما إنت في خطوة النتيجة</b> (زرار "تحقق من شوبيفاي الآن" بيحتاجه)، وبيتصفّر في <code>resetToSearch()</code> — يعني عند الضغط على "إلغاء أوردر آخر؟" أو عند الـ logout</li>
               <li><code>liveCancelReasons</code> — قائمة الأسباب اللي جاية من lookup_order، بتتغيّر كل بحث</li>
               <li><code>WAREHOUSE_ACK_STATUSES = ['Confirmed','Ready']</code> — الحالات اللي بتطلب إقرار الإبلاغ</li>
               <li><code>FINANCIAL_STATUS_AR</code> · <code>FULFILLMENT_STATUS_AR</code> — ترجمة حالات شوبيفاي، نسخة احتياطية لو الـ Worker أقدم من v2.3.0</li>
-              <li><code>msState</code> — حالة فلاتر السجل (<code>emp</code> · <code>type</code>): العناصر + المختار + بحث القائمة</li>
+              <li><code>msState</code> — حالة فلاتر السجل (<code>emp</code> · <code>type</code> · <code>reason</code>): العناصر + المختار + بحث القائمة. عناصر <code>emp</code> و<code>reason</code> بتتحمّل من الـ Worker — ممنوع أي قيمة hardcoded فيهم</li>
               <li><code>LOG_PAGE_SIZE = 100</code> · <code>sortState { key, dir }</code> · <code>dateFilterActive</code></li>
             </ul>
 
@@ -915,7 +987,11 @@ body {
               <li><b>عمود "النتيجة" بيقرا <code>extra.result</code>.</b> الصفوف اللي اتكتبت قبل Worker v2.5.0 مالهاش الحقل ده، فبتتعرض "—" مش "✓" — إحنا فعليًا مش عارفين إن كانت اتأكدت وقتها ولا لأ</li>
               <li><b>حدود فلتر التاريخ بتوقيت UTC</b> زي ما الـ timestamp متخزّن في D1، والعرض بتوقيت القاهرة (UTC+3). فرق التلات ساعات ممكن يخلي عملية بعد ٩ مساءً بتوقيت القاهرة تقع في يوم UTC اللي بعده — مقبول لفلتر بالأيام، ومكتوب هنا عشان مايتكتشفش كباج</li>
               <li><b>حارس نسخة الـ Worker حد أدنى مش تطابق.</b> <code>cmpVersion()</code> مقارنة رقمية (مش نصية — <code>"10"</code> أصغر من <code>"9"</code> كنص)، والتحذير يولّع بس لو الـ Worker <b>أقدم</b> من <code>MIN_WORKER_VERSION</code>. النمط القديم (تطابق حرفي) كان تحذير كاذب دايم، والموظف بيتعوّد يتجاهله فالحالة الحقيقية بتعدّي بلا إشارة</li>
-              <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code>) — امتداد مقصود على النسخة القياسية لدوال السجل، عشان الفلاتر multi-select. من غيره كانت الفلترة هتبقى على الصفحة المحمّلة بس وعدّاد النتائج يكدب</li>
+              <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code> · <code>reasons</code>) — امتداد مقصود على النسخة القياسية لدوال السجل، عشان الفلاتر multi-select. من غيره كانت الفلترة هتبقى على الصفحة المحمّلة بس وعدّاد النتائج يكدب</li>
+              <li><b>سبب الإلغاء متخزّن جوّه <code>extra</code> كـ JSON مش عمود مستقل</b>، فالفلترة بتستخدم <code>json_extract(extra,'$.reasonLabel')</code>. الصفوف اللي مالهاش سبب (زي محاولة فشلت قبل اختيار السبب) مش بتطابق أي قيمة في الفلتر — وده الصح</li>
+              <li><b>فاصل قيم الفلتر فاصلة (<code>,</code>)</b> في الطرفين. مفيش سبب حالي فيه فاصلة (متأكَّد من D1)، ولو اتضاف واحد لازم الفاصل يتغيّر في الواجهة والـ Worker <b>مع بعض</b> — تغييره في مكان واحد بيدّي صفر نتايج بدون أي خطأ</li>
+              <li><b>الثيم الأحمر استثناء موثّق لهذه الأداة وحدها</b> — override للـ <code>--accent</code> بس، زي استثناء <code>Bosta Warehouse Return</code> في <code>ecommoda-html-builder</code>. <code>--red</code> و<code>--red-light</code> ما اتغيّروش، فبانرات الفشل لسه بلونها المعياري</li>
+              <li><b>خطوة النتيجة بتاخد الأخضر والأصفر مع بعض.</b> الأصفر (مش مؤكَّد) معناه إن الإلغاء <b>اتبعت فعلاً</b>، والرجوع لبطاقة الأوردر بعده بيغري بمحاولة تانية على أوردر خلاص اتلغى. الأحمر (فشل) بس هو اللي بيفضل في مكانه</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
               <li><b>سقف التصدير 2000 صف.</b> لو المطابق للفلاتر أكتر، الملف بيتقص — والأداة بتقول كده صراحةً في بانر فوق الجدول بالرقمين (اتصدّر كام من أصل كام). الرقم جاي من الـ Worker (<code>cap</code> · <code>total</code> · <code>truncated</code>) مش متخمّن في الواجهة</li>
               <li><b>حالة S1 بتتكتب بعد التأكيد بس.</b> لو الإلغاء رجع أصفر (مش مؤكَّد)، الحالة ما بتتكتبش — "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً. فيه Flow على شوبيفاي بيكتبها كمان بعد ~15 ثانية، فالحالة مش بتضيع</li>
@@ -1017,13 +1093,13 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.6.0';
+const TOOL_VERSION = 'v1.7.0';
 
 // أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
 // get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
 // ⚠️ صيانة: أي endpoint جديد الصفحة تعتمد عليه → ارفع الرقم ده في نفس التسليم.
 // ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
-const MIN_WORKER_VERSION = '2.7.0';
+const MIN_WORKER_VERSION = '2.8.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -1413,6 +1489,7 @@ async function finishLogin(username, displayName) {
   document.getElementById('activeUserBtn').textContent = `👤 ${displayName}`;
   showToast(`أهلاً ${displayName} 👋`, 'success');
   playBeep('success');
+  loadLogReasons();               // فلتر أسباب السجل — أول ما يبقى فيه سر شغّال
   document.getElementById('orderInput').focus();
 }
 
@@ -1432,11 +1509,9 @@ async function doLogout() {
   renderLoginMode('employee');
   clearLoginAlert();
 
-  // CUSTOMIZE: reset tool state
-  currentOrder = null;
-  liveCancelReasons = [];
-  document.getElementById('orderInput').value = '';
-  document.getElementById('orderArea').innerHTML = '<div class="empty-state">ابحث عن أوردر للبدء</div>';
+  // CUSTOMIZE: reset tool state — resetToSearch بترجّع خطوة النتيجة كمان،
+  // فالموظف اللي بعده مايلاقيش نتيجة اللي قبله معروضة
+  resetToSearch();
   document.getElementById('activeUserBtn').textContent = '👤 —';
 
   // السجل: صفّر البيانات والفلاتر ورجّع التاب الأساسي — الموظف اللي بعده
@@ -1697,7 +1772,7 @@ async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
     const logWarn = (res.ok && res.logged === false) ? `
       <div class="log-warn">⚠️ العملية تمت لكن <b>ما اتسجلتش في السجل</b>${res.logError ? ` — ${res.logError}` : ''}</div>` : '';
 
-    resultArea.innerHTML = `
+    const bannerHtml = `
       <div class="result-banner ${status}" id="resultBanner">
         <div class="result-title ${status}">${titleMap[status]}</div>
         <div>${res.ok ? res.message : res.error}</div>
@@ -1717,12 +1792,16 @@ async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
     else { showToast('فشل الإلغاء', 'error'); playBeep('error'); }
 
     if (res.ok) {
-      // امنع إعادة الإلغاء على نفس الشاشة — الأوردر بقى ملغي أو قيد التأكيد
-      if (cancelBtn) cancelBtn.remove();
-      const sel = document.getElementById('reasonSelect');
-      if (sel) sel.disabled = true;
-    } else if (cancelBtn) {
-      cancelBtn.disabled = false; cancelBtn.textContent = '🚫 إلغاء الأوردر';
+      // ✅ / ⚠ = الإلغاء اتبعت فعلاً ولا رجعة فيه → خطوة نتيجة منفصلة.
+      // ⚠️ الأصفر بيروح لنفس الخطوة زي الأخضر عن قصد: الفعل اتنفّذ، اللي ما
+      // اتأكدش هو التأكيد بس — ورجوع الموظف لبطاقة الأوردر بعد إلغاء اتبعت
+      // بيغري بمحاولة تانية على أوردر خلاص اتلغى. زرار "تحقق من شوبيفاي الآن"
+      // بيتنقل معاه جوّه الخطوة وبيفضل شغّال.
+      showResultStep(bannerHtml);
+    } else {
+      // ✗ فشل = مفيش حاجة اتغيّرت → الشاشة تفضل مكانها عشان يعيد المحاولة
+      resultArea.innerHTML = bannerHtml;
+      if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.textContent = '🚫 إلغاء الأوردر'; }
     }
   } catch (err) {
     resultArea.innerHTML = `
@@ -1734,6 +1813,36 @@ async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
     if (cancelBtn) { cancelBtn.disabled = false; cancelBtn.textContent = '🚫 إلغاء الأوردر'; }
     showToast('فشل الإلغاء', 'error'); playBeep('error');
   }
+}
+
+// ─── §TOOL-JS::resultStep ───
+// خطوة النتيجة: البحث وبطاقة الأوردر بيتخفوا بالكامل وتفضل النتيجة لوحدها.
+// `currentOrder` بيفضل زي ما هو — زرار "تحقق من شوبيفاي الآن" بيحتاجه.
+function showResultStep(bannerHtml) {
+  document.getElementById('resultStepBody').innerHTML = bannerHtml;
+  document.getElementById('resultStepOrder').innerHTML =
+    currentOrder ? orderLink(currentOrder.name, currentOrder.numericId) : '';
+  document.getElementById('searchStep').style.display = 'none';
+  document.getElementById('resultStep').style.display = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// رجوع للوضع الأول **خالص**: مفيش أوردر، مفيش سبب، مفيش نتيجة، ومربع البحث
+// فاضي وفيه فوكس. أي بقايا من العملية اللي فاتت على الشاشة = خطر إلغاء الأوردر
+// الغلط، فالتصفير كامل مش جزئي.
+function resetToSearch() {
+  currentOrder = null;
+  liveCancelReasons = [];
+  document.getElementById('resultStepBody').innerHTML = '';
+  document.getElementById('resultStepOrder').innerHTML = '';
+  document.getElementById('resultStep').style.display = 'none';
+  document.getElementById('searchStep').style.display = '';
+  const input = document.getElementById('orderInput');
+  input.value = ''; input.classList.remove('has-value');
+  document.getElementById('orderArea').innerHTML =
+    '<div class="empty-state">ابحث عن أوردر للبدء</div>';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  input.focus();
 }
 
 
@@ -1787,7 +1896,9 @@ function switchMainTab(tab) {
   document.getElementById('tabLog').classList.toggle('active', tab === 'log');
   document.getElementById('panelMain').classList.toggle('active', tab === 'main');
   document.getElementById('panelLog').classList.toggle('active', tab === 'log');
-  if (tab === 'log' && !logLoaded) fetchLog();   // lazy load
+  // الأسباب بتتحدّث مع كل فتحة للتاب — إلغاء بسبب جديد بيضيف خيار جديد للفلتر
+  // من غير ما الموظف يعمل refresh للصفحة.
+  if (tab === 'log') { loadLogReasons(); if (!logLoaded) fetchLog(); }   // lazy load
   updateTabChip();
   closeTabChipMenu();
 }
@@ -1853,8 +1964,21 @@ const msState = {
   emp:  { items: [], selected: new Set(), search: '' },
   type: { items: Object.keys(LOG_TYPE_LABELS).map(v => ({ value: v, label: LOG_TYPE_LABELS[v] })),
           selected: new Set(), search: '' },
+  // الأسباب بتتحمّل من get_log_reasons (D1) — ممنوع تتكتب هنا hardcoded:
+  // قائمة شوبيفاي بتتغيّر، والسجل بيفضل شايل الأسباب القديمة.
+  reason: { items: [], selected: new Set(), search: '' },
 };
-const filterLabels = { emp: 'الموظف', type: 'نوع العملية', date: 'الفترة' };
+const filterLabels = { emp: 'الموظف', type: 'نوع العملية', reason: 'سبب الإلغاء', date: 'الفترة' };
+
+// قيم الفلاتر بتتحط جوّه onclick كنص — أي `'` أو `\` في السبب بيكسر الـ handler
+// في السكوت (الزرار يبقى موجود ومش بيعمل حاجة). الأسباب نص حر من شوبيفاي، فالهروب
+// إلزامي مش احتياطي.
+function jsAttr(v) {
+  return String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+function htmlText(v) {
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 function msRenderList(key) {
   const st = msState[key];
@@ -1866,9 +1990,10 @@ function msRenderList(key) {
     ? '<div class="ms-empty">لا توجد عناصر</div>'
     : visible.map(it => {
         const checked = st.selected.has(it.value);
-        return `<div class="ms-item ${checked ? 'checked' : ''}" onclick="msToggleItem('${key}','${it.value}')">
-          <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation(); msToggleItem('${key}','${it.value}')">
-          <span class="ms-item-label">${it.label}</span></div>`;
+        const v = jsAttr(it.value);
+        return `<div class="ms-item ${checked ? 'checked' : ''}" onclick="msToggleItem('${key}','${v}')">
+          <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation(); msToggleItem('${key}','${v}')">
+          <span class="ms-item-label">${htmlText(it.label)}</span></div>`;
       }).join('');
 
   const allVisibleChecked = visible.length > 0 && visible.every(it => st.selected.has(it.value));
@@ -1937,7 +2062,7 @@ function renderChips() {
     const chips = [...msState[key].selected].map(val => {
       const item = msState[key].items.find(it => it.value === val);
       const v = item ? item.label : val;
-      return `<span class="ms-chip">${v}<button onclick="msToggleItem('${key}','${val.replace(/'/g, "\\'")}')">✕</button></span>`;
+      return `<span class="ms-chip">${htmlText(v)}<button onclick="msToggleItem('${key}','${jsAttr(val)}')">✕</button></span>`;
     }).join('');
     row.innerHTML = chips ? `<span class="chips-label">${filterLabels[key]}:</span>${chips}` : '';
   });
@@ -2102,10 +2227,15 @@ function applySort(rows) {
 function logQueryParams() {
   const p = {};
   const emps = [...msState.emp.selected], types = [...msState.type.selected];
+  const reasons = [...msState.reason.selected];
   const search = document.getElementById('logSearchInput').value.trim();
   const from = document.getElementById('dateFromInput').value, to = document.getElementById('dateToInput').value;
   if (emps.length)  p.employees = emps.join(',');
   if (types.length) p.types = types.join(',');
+  // ⚠️ الفاصل فاصلة، والـ Worker بيقسّم عليها — سبب فيه فاصلة هيتقسّم لقيمتين
+  // ومش هيطابق أي صف. مفيش سبب حالي فيه فاصلة (متأكَّد من D1 01-09-2026)،
+  // ولو اتضاف واحد لازم الفاصل يتغيّر في الطرفين مع بعض.
+  if (reasons.length) p.reasons = reasons.join(',');
   if (search)       p.search = search;
   if (from)         p.dateFrom = from;
   if (to)           p.dateTo = to;
@@ -2267,6 +2397,19 @@ async function exportLogXLSX() {
   }
 }
 
+// قائمة أسباب الإلغاء في فلتر السجل — من get_log_reasons (D1) مش من شوبيفاي.
+// السبب: الفلتر بيفلتر **اللي اتسجّل فعلاً**. سبب اتشال من تعريف الميتافيلد لازم
+// يفضل قابل للفلترة عشان صفوفه القديمة لسه في السجل، وسبب جديد لسه ما اتستخدمش
+// مالوش لازمة في القايمة. الفشل مايكسرش تاب السجل — الفلتر بيفضل فاضي وبس.
+async function loadLogReasons() {
+  try {
+    const d = await apiGet('get_log_reasons');
+    if (!d.ok) return;
+    msState.reason.items = (d.reasons || []).map(r => ({ value: r, label: r }));
+    msRenderList('reason');
+  } catch (e) { /* الإعدادات ممكن تكون لسه مش مضبوطة */ }
+}
+
 // قائمة الموظفين في فلتر السجل — من get_employees، ممنوع أي أسماء hardcoded
 function fillLogEmployeeFilter(employees) {
   msState.emp.items = (employees || []).map(e => ({
@@ -2287,6 +2430,7 @@ buildTabChipMenu();
 updateTabChip();
 msRenderList('emp');
 msRenderList('type');
+msRenderList('reason');
 renderChips();
 updateFilterIconState();
 loadEmployeesList();
