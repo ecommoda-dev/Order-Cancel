@@ -1,8 +1,21 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.7.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
-// skills: worker-builder v1.1.0 · html-builder v3.0.0 · constants v1.4.1 ·
+// TOOL_VERSION: v2.8.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// skills: worker-builder v1.1.0 · html-builder v4.0.0 · constants v1.4.2 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.8.0:
+//   🟡 [جديد] فلتر **سبب الإلغاء** في السجل — باراميتر `reasons` (قايمة) على
+//       التلات endpoints (`get_logs` · `get_logs_count` · `get_logs_export`).
+//       الفلترة server-side زي باقي الفلاتر — `json_extract(extra,'$.reasonLabel')`
+//       — عشان عدّاد "النتائج" والترقيم والتصدير يقولوا نفس الرقم. أي فلترة
+//       client-side على الصفحة المحمّلة كانت هتخلي التلاتة يكدبوا.
+//   🟡 [جديد] endpoint `get_log_reasons` — قايمة الأسباب المتاحة في السجل
+//       (DISTINCT من D1، مش من شوبيفاي). السبب إنها من D1: الفلتر بيفلتر
+//       **اللي اتسجّل فعلاً**، فسبب اتشال من تعريف الميتافيلد لازم يفضل
+//       قابل للفلترة، وسبب جديد لسه ما اتستخدمش مالوش لازمة في القايمة.
+//       ⚠️ الأسباب دي **مش** متفلترة بباقي الفلاتر المختارة — القايمة ثابتة
+//       زي قايمة الموظفين، عشان الخيارات ما تختفيش وأنت بتفلتر.
 //
 // CHANGELOG v2.7.0:
 //   🔴 [إصلاح] `get_logs_export` كان بيقص عند 2000 صف **في السكوت** — الواجهة
@@ -135,7 +148,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.7.0";
+const WORKER_VERSION = "2.8.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -295,13 +308,14 @@ async function writeLog(db, entry) {
  *
  * ⚠️ امتداد مقصود على النسخة القياسية في ecommoda-worker-builder →
  * references/shared-functions.md: الباراميترز `employees` (قايمة) و`types`
- * (قايمة) و`dateFrom`/`dateTo` **إضافية واختيارية**، والسلوك من غيرها مطابق
- * حرفيًا للنسخة القياسية. السبب: معيار data-table-standard بيفرض إن كل فلاتر
- * أي جدول تبقى multi-select، والنسخة القياسية بتاخد `employee` واحد بس —
- * فالفلترة كانت هتضطر تبقى client-side على الصفحة الحالية، وده بيخلي عدّاد
- * "النتائج" وترقيم الصفحات يكدبوا. الامتداد ده مرشّح يترفع للمهارة نفسها.
+ * (قايمة) و`reasons` (قايمة) و`dateFrom`/`dateTo` **إضافية واختيارية**،
+ * والسلوك من غيرها مطابق حرفيًا للنسخة القياسية. السبب: معيار
+ * data-table-standard بيفرض إن كل فلاتر أي جدول تبقى multi-select، والنسخة
+ * القياسية بتاخد `employee` واحد بس — فالفلترة كانت هتضطر تبقى client-side
+ * على الصفحة الحالية، وده بيخلي عدّاد "النتائج" وترقيم الصفحات يكدبوا.
+ * الامتداد ده مرشّح يترفع للمهارة نفسها (SKILL-FIXES.md بند ٣).
  */
-function buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo }) {
+function buildLogFilterSQL({ tool, employees, types, reasons, search, dateFrom, dateTo }) {
   let sql = "SELECT_PLACEHOLDER FROM logs WHERE type NOT IN ('login','logout')";
   const b = [];
   if (tool) { sql += " AND tool = ?"; b.push(tool); }
@@ -312,6 +326,13 @@ function buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo })
   if (Array.isArray(types) && types.length) {
     sql += ` AND type IN (${types.map(() => "?").join(",")})`;
     b.push(...types);
+  }
+  // سبب الإلغاء متخزّن جوّه عمود `extra` كـ JSON (`extra.reasonLabel`) — مش عمود
+  // مستقل. json_extract هي الطريقة الوحيدة نفلتر بيه في SQL، والبديل (فلترة في
+  // الواجهة على الصفحة المحمّلة) بيخلي "النتائج" والترقيم والتصدير تلاتتهم يكدبوا.
+  if (Array.isArray(reasons) && reasons.length) {
+    sql += ` AND json_extract(extra, '$.reasonLabel') IN (${reasons.map(() => "?").join(",")})`;
+    b.push(...reasons);
   }
   if (search) {
     sql += " AND (order_name LIKE ? OR notes LIKE ?)";
@@ -326,18 +347,19 @@ function buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo })
   return { sql, b };
 }
 
-async function getLogs(db, { tool = null, employees = null, types = null, search = null,
-                             dateFrom = null, dateTo = null, limit = 100, offset = 0 } = {}) {
-  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+async function getLogs(db, { tool = null, employees = null, types = null, reasons = null,
+                             search = null, dateFrom = null, dateTo = null,
+                             limit = 100, offset = 0 } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, reasons, search, dateFrom, dateTo });
   const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + " ORDER BY timestamp DESC LIMIT ? OFFSET ?";
   b.push(Math.min(Number(limit) || 100, 100), Math.max(Number(offset) || 0, 0));
   return (await db.prepare(q).bind(...b).all()).results;
 }
 
 /** عدد الصفوف المطابقة للفلتر — للترقيم. نفس الفلاتر بالظبط، من غير data. */
-async function getLogsCount(db, { tool = null, employees = null, types = null, search = null,
-                                  dateFrom = null, dateTo = null } = {}) {
-  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+async function getLogsCount(db, { tool = null, employees = null, types = null, reasons = null,
+                                  search = null, dateFrom = null, dateTo = null } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, reasons, search, dateFrom, dateTo });
   const row = await db.prepare(sql.replace("SELECT_PLACEHOLDER", "SELECT COUNT(*) as total")).bind(...b).first();
   return row?.total ?? 0;
 }
@@ -347,9 +369,9 @@ async function getLogsCount(db, { tool = null, employees = null, types = null, s
 const LOG_EXPORT_MAX = 2000;
 
 /** كل الصفوف المطابقة للتصدير — لحد LOG_EXPORT_MAX صف. ممنوع استخدام getLogs للتصدير. */
-async function getLogsExport(db, { tool = null, employees = null, types = null, search = null,
-                                   dateFrom = null, dateTo = null } = {}) {
-  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+async function getLogsExport(db, { tool = null, employees = null, types = null, reasons = null,
+                                   search = null, dateFrom = null, dateTo = null } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, reasons, search, dateFrom, dateTo });
   const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + ` ORDER BY timestamp DESC LIMIT ${LOG_EXPORT_MAX}`;
   return (await db.prepare(q).bind(...b).all()).results;
 }
@@ -965,6 +987,7 @@ function logParamsFrom(url) {
     tool: TOOL_NAME,
     employees: list("employees"),
     types: list("types"),
+    reasons: list("reasons"),
     search: url.searchParams.get("search") || null,
     dateFrom: url.searchParams.get("dateFrom") || null,
     dateTo: url.searchParams.get("dateTo") || null,
@@ -985,6 +1008,27 @@ async function handleGetLogsCount(request, env) {
   const url = new URL(request.url);
   const total = await getLogsCount(env.DB, logParamsFrom(url));
   return json({ ok: true, total }, 200, request);
+}
+
+/**
+ * ─── §LOG-ENDPOINTS::handleGetLogReasons ───
+ * قايمة أسباب الإلغاء المتاحة في **السجل** — مصدرها D1 مش شوبيفاي.
+ * السبب: الفلتر بيفلتر اللي اتسجّل فعلاً. سبب اتشال من تعريف الميتافيلد لازم
+ * يفضل قابل للفلترة (الصفوف القديمة لسه موجودة)، وسبب جديد لسه ما اتستخدمش
+ * مالوش لازمة في القايمة. لو اتقرت من شوبيفاي كانت هتحصل الحاجتين بالعكس.
+ * ⚠️ مش متفلترة بباقي الفلاتر — القايمة ثابتة زي قايمة الموظفين، عشان
+ * الخيارات ما تختفيش من تحت إيد الموظف وهو بيفلتر.
+ */
+async function handleGetLogReasons(request, env) {
+  const { results } = await env.DB.prepare(`
+    SELECT DISTINCT json_extract(extra, '$.reasonLabel') AS reason
+    FROM logs
+    WHERE tool = ? AND type NOT IN ('login','logout')
+      AND json_extract(extra, '$.reasonLabel') IS NOT NULL
+      AND json_extract(extra, '$.reasonLabel') != ''
+    ORDER BY reason
+  `).bind(TOOL_NAME).all();
+  return json({ ok: true, reasons: (results || []).map(r => r.reason) }, 200, request);
 }
 
 async function handleGetLogsExport(request, env) {
@@ -1110,6 +1154,7 @@ export default {
       if (action === "get_logs") return await handleGetLogs(request, env);
       if (action === "get_logs_count") return await handleGetLogsCount(request, env);
       if (action === "get_logs_export") return await handleGetLogsExport(request, env);
+      if (action === "get_log_reasons") return await handleGetLogReasons(request, env);
       // ──────────────────────────────────────────────────────
 
       return json({ ok: false, error: "Not found" }, 404, request);
