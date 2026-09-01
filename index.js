@@ -1,8 +1,14 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.6.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.7.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v1.1.0 · html-builder v3.0.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.7.0:
+//   🔴 [إصلاح] `get_logs_export` كان بيقص عند 2000 صف **في السكوت** — الواجهة
+//       بتقول "تم تصدير 2000 عملية ✓" والملف ناقص، والموظف يفتكره كامل.
+//       دلوقتي الرد بيشيل `cap` و`total` و`truncated`، والواجهة بتحذّر بالرقمين.
+//       السقف بقى ثابت `LOG_EXPORT_MAX` بدل رقم مدفون في نص الـ SQL.
 //
 // CHANGELOG v2.6.0:
 //   🟡 [جديد] الأداة بقت بتكتب حالة الأوردر S1 (custom.manual_status) =
@@ -129,7 +135,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.6.0";
+const WORKER_VERSION = "2.7.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -336,11 +342,15 @@ async function getLogsCount(db, { tool = null, employees = null, types = null, s
   return row?.total ?? 0;
 }
 
-/** كل الصفوف المطابقة للتصدير — لحد 2000 صف. ممنوع استخدام getLogs للتصدير. */
+// سقف التصدير. ⚠️ الرقم ده لازم يرجع للواجهة مع النتيجة — من غير كده الملف
+// بيتقص في السكوت والموظف يفتكره كامل (فشل صامت، وده أخطر من رسالة خطأ).
+const LOG_EXPORT_MAX = 2000;
+
+/** كل الصفوف المطابقة للتصدير — لحد LOG_EXPORT_MAX صف. ممنوع استخدام getLogs للتصدير. */
 async function getLogsExport(db, { tool = null, employees = null, types = null, search = null,
                                    dateFrom = null, dateTo = null } = {}) {
   const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
-  const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + " ORDER BY timestamp DESC LIMIT 2000";
+  const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + ` ORDER BY timestamp DESC LIMIT ${LOG_EXPORT_MAX}`;
   return (await db.prepare(q).bind(...b).all()).results;
 }
 
@@ -979,8 +989,19 @@ async function handleGetLogsCount(request, env) {
 
 async function handleGetLogsExport(request, env) {
   const url = new URL(request.url);
-  const entries = await getLogsExport(env.DB, logParamsFrom(url));
-  return json({ ok: true, entries }, 200, request);
+  const params = logParamsFrom(url);
+  // العدّ الحقيقي جنب الصفوف — عشان الواجهة تقدر تقول "2000 من أصل 3500"
+  // بدل ما تقول "تم تصدير 2000 ✓" على ملف مقصوص.
+  const [entries, total] = await Promise.all([
+    getLogsExport(env.DB, params),
+    getLogsCount(env.DB, params),
+  ]);
+  return json({
+    ok: true, entries,
+    cap: LOG_EXPORT_MAX,
+    total,
+    truncated: total > LOG_EXPORT_MAX,
+  }, 200, request);
 }
 
 async function handleDiag(request, env) {

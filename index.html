@@ -485,6 +485,9 @@ body {
 .res-warning { background: var(--amber-light); color: var(--amber); }
 .res-error   { background: var(--red-light); color: var(--red); }
 
+.export-warn { margin: 12px 16px 0; padding: 10px 14px; border-radius: var(--radius-sm);
+  background: var(--amber-light); border: 1.5px solid #fcd34d; color: var(--amber);
+  font-size: 12.5px; font-weight: 700; line-height: 1.8; }
 .pagination-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; flex-wrap: wrap; }
 .page-info { font-size: 13px; color: var(--text-secondary); font-family: var(--font-mono); padding: 0 8px; }
 .page-btn { padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface);
@@ -690,6 +693,7 @@ body {
       </div>
 
       <div class="tbl-body-wrap" id="tblBodyWrap">
+        <div class="export-warn" id="exportWarn" style="display:none;"></div>
         <div class="tbl-scroll">
           <table class="data-table">
             <thead>
@@ -762,6 +766,7 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>التصدير كان بيتقص عند 2000 صف في السكوت</b> — الرسالة كانت "تم تصدير 2000 عملية ✓" والملف ناقص. دلوقتي بانر تحذير ثابت فوق الجدول بيقول كام صف اتصدّر من أصل كام</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الأداة بقت بتحدّث حالة الأوردر S1 إلى <code>Cancelled</code></b> مع كل إلغاء مؤكَّد — أكشن جديد. الانتقال بيتفحص الأول، والتغيير بيتسجّل في D1 بالقيمة قبل وبعد</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>سطر <b>"ما تم فعليًا"</b> تحت نتيجة الإلغاء — بيعدّد اللي حصل فعلاً خطوة خطوة (الإلغاء + الاسترجاع · السبب · التأكيد · تحديث S1)، وبيظهر حتى لو العملية فشلت في النص</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>لو الكتابة في السجل فشلت، الأداة كانت بتقول <b>"فشل الإلغاء"</b> والأوردر يكون اتلغى فعلاً. دلوقتي بتقول "تمت لكن ما اتسجلتش"</span></li>
@@ -912,6 +917,7 @@ body {
               <li><b>حارس نسخة الـ Worker حد أدنى مش تطابق.</b> <code>cmpVersion()</code> مقارنة رقمية (مش نصية — <code>"10"</code> أصغر من <code>"9"</code> كنص)، والتحذير يولّع بس لو الـ Worker <b>أقدم</b> من <code>MIN_WORKER_VERSION</code>. النمط القديم (تطابق حرفي) كان تحذير كاذب دايم، والموظف بيتعوّد يتجاهله فالحالة الحقيقية بتعدّي بلا إشارة</li>
               <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code>) — امتداد مقصود على النسخة القياسية لدوال السجل، عشان الفلاتر multi-select. من غيره كانت الفلترة هتبقى على الصفحة المحمّلة بس وعدّاد النتائج يكدب</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
+              <li><b>سقف التصدير 2000 صف.</b> لو المطابق للفلاتر أكتر، الملف بيتقص — والأداة بتقول كده صراحةً في بانر فوق الجدول بالرقمين (اتصدّر كام من أصل كام). الرقم جاي من الـ Worker (<code>cap</code> · <code>total</code> · <code>truncated</code>) مش متخمّن في الواجهة</li>
               <li><b>حالة S1 بتتكتب بعد التأكيد بس.</b> لو الإلغاء رجع أصفر (مش مؤكَّد)، الحالة ما بتتكتبش — "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً. فيه Flow على شوبيفاي بيكتبها كمان بعد ~15 ثانية، فالحالة مش بتضيع</li>
               <li>فشل تحديث S1 <b>مايلغيش</b> إن الأوردر اتلغى — النتيجة بتبقى ⚠ أصفر وسطر "ما تم فعليًا" بيقول إيه اللي تم وإيه اللي فشل</li>
               <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها إن الـ Worker استنى الـ Job بتاع <code>orderCancel</code> لمدة ≈٦ ثوانٍ (backoff متصاعد 400→2200ms) و<code>cancelledAt</code> لسه ما اتسجّلش. دي <b>"ما قدرناش نتأكد"</b> — مش "تم" ومش "فشل". الـ Job بيكمل لوحده في الغالب، فالبانر فيه زرار <code>recheckCancelStatus()</code> بيعيد القراءة ويحوّله لأخضر لو اتأكد. لو فضلت صفرا بعد كذا محاولة، افتح الأوردر في شوبيفاي</li>
@@ -1011,13 +1017,13 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.5.0';
+const TOOL_VERSION = 'v1.6.0';
 
 // أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
 // get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
 // ⚠️ صيانة: أي endpoint جديد الصفحة تعتمد عليه → ارفع الرقم ده في نفس التسليم.
 // ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
-const MIN_WORKER_VERSION = '2.6.0';
+const MIN_WORKER_VERSION = '2.7.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -2038,7 +2044,13 @@ function onLogSearchInput(el) {
   logSearchTimer = setTimeout(() => { logCurrentPage = 1; fetchLog(); }, 400);
   updateFilterIconState();
 }
-function onLogFilterChanged() { logCurrentPage = 1; updateFilterIconState(); fetchLog(); }
+function onLogFilterChanged() {
+  logCurrentPage = 1;
+  updateFilterIconState();
+  const w = document.getElementById('exportWarn');
+  if (w) w.style.display = 'none';   // تحذير تصدير قديم مايخصّش فلاتر جديدة
+  fetchLog();
+}
 
 function clearAllLogFiltersSilent() {
   Object.keys(msState).forEach(k => { msState[k].selected.clear(); msRenderList(k); });
@@ -2203,6 +2215,7 @@ async function exportLogXLSX() {
   try {
     const data = await apiGet('get_logs_export', logQueryParams());
     if (!data.ok) throw new Error(data.error || 'تعذّر التصدير');
+    document.getElementById('exportWarn').style.display = 'none';
     const rows = (data.entries || []).map(buildLogRow).map(r => ({
       'التاريخ':     r.iso ? formatDateForExport(r.iso) : null,
       'الوقت':       r.iso ? formatTimeForExport(r.iso) : null,
@@ -2231,7 +2244,22 @@ async function exportLogXLSX() {
     const url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = `order-cancel-log-${new Date().toISOString().substring(0, 10)}.xlsx`;
     a.click(); URL.revokeObjectURL(url);
-    showToast(`تم تصدير ${rows.length} عملية ✓`, 'success');
+
+    // ⚠️ الملف بيتقص عند سقف الـ Worker. "تم التصدير ✓" على ملف ناقص = فشل صامت،
+    // فالتحذير بانر ثابت فوق الجدول (مش توست بيختفي) وبيقول الرقمين بالظبط.
+    const cap = data.cap || null;
+    const total = (typeof data.total === 'number') ? data.total : null;
+    const truncated = data.truncated === true || (cap !== null && rows.length >= cap);
+    if (truncated) {
+      const warn = document.getElementById('exportWarn');
+      warn.innerHTML = `⚠️ <b>التصدير اتقص</b> — الملف فيه ${rows.length.toLocaleString('en-US')} صف`
+        + (total !== null ? ` من أصل <b>${total.toLocaleString('en-US')}</b> مطابقين للفلاتر` : '')
+        + `. ضيّق الفترة أو الفلاتر وصدّر على دفعات.`;
+      warn.style.display = '';
+      showToast(`⚠️ التصدير اتقص عند ${rows.length.toLocaleString('en-US')} صف — الملف مش كامل`, 'error', 7000);
+    } else {
+      showToast(`تم تصدير ${rows.length.toLocaleString('en-US')} عملية ✓`, 'success');
+    }
   } catch (err) {
     showToast('خطأ في التصدير: ' + err.message, 'error');
   } finally {
