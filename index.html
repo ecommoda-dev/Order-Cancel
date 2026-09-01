@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إلغاء الأوردرات يدويًا — EcomModa</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
 <style>
 /* ══════════════════════════════════════════════════════════════
@@ -41,7 +42,7 @@
   --font-mono:      'Noto Sans Arabic', -apple-system, sans-serif;
   --font:           var(--font-body);
   --mono:           var(--font-mono);
-  --container-max:  1040px; /* Tier S — لا يوجد جدول بيانات رئيسي في الأداة */
+  --container-max:  1200px; /* Tier M — الأداة فيها Log Tab بجدول (data-table-standard §9) */
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -275,6 +276,218 @@ body {
 .confirm-check { margin: 12px 18px 0; padding: 10px 12px; background: var(--amber-light); border: 1.5px solid #fcd34d; border-radius: var(--radius-sm); }
 .confirm-check label { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 700; color: var(--amber); cursor: pointer; line-height: 1.6; }
 .confirm-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--red); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+
+/* ══════════════════════════════════════════════════════════════
+   §STYLES::tabs — Main Tabs + Freeze on Scroll (tabs-and-modals.md §1/§1b)
+   ══════════════════════════════════════════════════════════════ */
+.sticky-header-wrap { position: sticky; top: 0; z-index: 300; background: var(--bg); padding-top: 2px; margin: 0 -2px; }
+.sticky-header-wrap.stuck { box-shadow: 0 6px 18px rgba(0,0,0,.10); }
+.sticky-header-wrap.stuck .app-header       { padding: 6px 14px; margin-bottom: 6px; }
+.sticky-header-wrap.stuck .app-icon         { font-size: 16px; }
+.sticky-header-wrap.stuck .app-title-text h1{ font-size: 12.5px; }
+.sticky-header-wrap.stuck .app-title-text span { max-height: 0; opacity: 0; margin-top: 0; }
+.sticky-header-wrap.stuck .hbtn             { padding: 4px 9px; font-size: 11px; }
+.app-header        { transition: padding .18s ease; }
+.app-icon          { transition: font-size .18s ease; }
+.app-title-text h1 { transition: font-size .18s ease; }
+.app-title-text span { display: block; overflow: hidden; max-height: 16px; margin-top: 2px;
+  transition: max-height .18s ease, opacity .18s ease, margin-top .18s ease; }
+
+.main-tabs-bar { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 6px; margin-bottom: 14px; box-shadow: var(--shadow); overflow: hidden;
+  transition: max-height .22s ease, opacity .18s ease, padding .18s ease, margin .18s ease, border-width .18s ease; }
+.main-tab-btn { flex: 1; padding: 9px 10px; border: 2px solid transparent; background: transparent;
+  border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--text-secondary); cursor: pointer; transition: all .15s; display: flex; align-items: center;
+  justify-content: center; gap: 6px; white-space: nowrap; }
+.main-tab-btn:hover { background: var(--surface-2); color: var(--text-primary); }
+.main-tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 8px rgba(37,99,235,.25); }
+.sticky-header-wrap.stuck .main-tabs-bar { max-height: 0 !important; opacity: 0; padding: 0; margin-bottom: 0; border-width: 0; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.active-tab-chip { display: none; align-items: center; gap: 6px; padding: 5px 10px;
+  border: 1.5px solid var(--border-strong); border-radius: 20px; background: var(--surface-2);
+  font-size: 11.5px; font-weight: 700; color: var(--text-primary); cursor: pointer; position: relative;
+  white-space: nowrap; transition: border-color .15s, color .15s; }
+.active-tab-chip:hover { border-color: var(--accent); color: var(--accent); }
+.active-tab-chip.open  { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-light); }
+.sticky-header-wrap.stuck .active-tab-chip { display: flex; }
+.chip-arrow { font-size: 9px; color: var(--text-muted); transition: transform .2s; }
+.active-tab-chip.open .chip-arrow { transform: rotate(180deg); }
+.tab-chip-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 310; min-width: 180px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: 0 8px 28px rgba(0,0,0,.14); display: none; padding: 4px; }
+.tab-chip-menu.open { display: block; }
+.tab-chip-item { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 12.5px;
+  font-weight: 600; border-radius: 6px; cursor: pointer; color: var(--text-secondary); white-space: nowrap; }
+.tab-chip-item:hover  { background: var(--surface-2); }
+.tab-chip-item.active { background: var(--accent-light); color: var(--accent-dark); }
+
+/* ══════════════════════════════════════════════════════════════
+   §STYLES::table — القسم الموحّد (data-table-standard.md)
+   ⚠️ ممنوع overflow:hidden على .unified-section — بيقص قوايم الفلاتر
+   ══════════════════════════════════════════════════════════════ */
+.unified-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); margin-bottom: 16px; }
+.section-divider { border-top: 1px solid var(--border); }
+
+.flt-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px;
+  background: var(--surface-2); cursor: pointer; user-select: none; transition: background .12s;
+  border-radius: var(--radius) var(--radius) 0 0; }
+.flt-header:hover { background: #f0f4f8; }
+.flt-header-right { display: flex; align-items: center; gap: 10px; }
+.flt-icon { width: 34px; height: 22.5px; color: var(--text-muted); transition: color .2s; flex-shrink: 0; }
+.flt-icon.active { color: var(--accent); }
+.flt-toggle { font-size: 13px; color: var(--text-muted); transition: transform .25s; }
+.flt-toggle.open { transform: rotate(180deg); }
+.flt-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.flt-body.collapsed { display: none; }
+.flt-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.flt-g { display: flex; flex-direction: column; gap: 3px; }
+.flt-lbl { font-size: 10px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; }
+
+.clear-btn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s;
+  white-space: nowrap; height: 34px; border: 1px solid var(--red-border); color: var(--red); background: var(--red-light); }
+.clear-btn:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.clear-btn.inactive { border-color: var(--border); color: var(--text-muted); background: var(--surface-2); cursor: not-allowed; opacity: .6; }
+.clear-btn.inactive:hover { background: var(--surface-2); color: var(--text-muted); border-color: var(--border); }
+
+/* البحث — الأيقونة شمال + padding-left، وإلا بتعمل overlap مع العربي */
+.search-wrap { position: relative; max-width: 280px; flex: 1; min-width: 200px; }
+.search-input { width: 100%; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: 8px 12px 8px 34px; font-family: inherit; font-size: 13px; height: 36px; box-sizing: border-box;
+  outline: none; background: var(--surface); transition: border-color .15s, background .15s; }
+.search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.search-input.has-value { border-color: var(--accent); background: var(--accent-light); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted); pointer-events: none; }
+
+/* فلتر التاريخ */
+.date-input { width: 160px; height: 34px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: 6px 10px; font-family: inherit; font-size: 12px; color: var(--text-primary); background: var(--surface);
+  outline: none; box-sizing: border-box; cursor: pointer; }
+.date-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.date-input.has-value { border-color: var(--accent); background: var(--accent-light); }
+.preset-wrap { position: relative; }
+.preset-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-secondary);
+  background: var(--surface); cursor: pointer; transition: all .15s; height: 34px; white-space: nowrap; }
+.preset-btn:hover, .preset-btn.has-preset { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.preset-btn .pr-arrow { font-size: 10px; transition: transform .2s; }
+.preset-btn.open .pr-arrow { transform: rotate(180deg); }
+.preset-menu { position: absolute; top: calc(100% + 4px); right: 0; background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); box-shadow: 0 4px 20px rgba(0,0,0,.12);
+  z-index: 200; min-width: 175px; padding: 4px; display: none; }
+.preset-menu.open { display: block; }
+.preset-item { padding: 7px 12px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer;
+  color: var(--text-primary); transition: background .1s; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.preset-item:hover { background: var(--surface-2); }
+.preset-item.active { background: var(--accent-light); color: var(--accent); }
+.preset-item .pr-check { font-size: 11px; color: var(--accent); display: none; }
+.preset-item.active .pr-check { display: block; }
+.preset-item.clear-item { color: var(--red); font-weight: 700; }
+.preset-item.clear-item:hover { background: var(--red-light); }
+.preset-sep { height: 1px; background: var(--border); margin: 3px 4px; }
+
+/* Multi-select (multi-select-filter.md) */
+.ms-wrap { position: relative; }
+.ms-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 190px;
+  height: 34px; padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface); font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-primary);
+  cursor: pointer; transition: all .15s; white-space: nowrap; }
+.ms-btn:hover { border-color: var(--accent); }
+.ms-btn.has-selection { border-color: var(--accent); color: var(--accent-dark); background: var(--accent-light); }
+.ms-btn.open { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(37,99,235,.08); }
+.ms-btn .ms-count { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: #fff;
+  background: var(--accent); border-radius: 20px; padding: 1px 7px; min-width: 18px; text-align: center; }
+.ms-btn .ms-arrow { font-size: 9px; color: var(--text-muted); transition: transform .2s; flex-shrink: 0; }
+.ms-btn.open .ms-arrow { transform: rotate(180deg); }
+.ms-menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 200; width: 260px; max-width: 80vw;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  box-shadow: 0 8px 28px rgba(0,0,0,.14); display: none; flex-direction: column; overflow: hidden; }
+.ms-menu.open { display: flex; }
+.ms-ftr-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 10px;
+  border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.ms-ftr-clear { font-size: 11.5px; font-weight: 700; color: var(--red); background: none; border: none;
+  cursor: pointer; padding: 4px 6px; border-radius: 5px; font-family: inherit; }
+.ms-ftr-clear:hover { background: var(--red-light); }
+.ms-ftr-count { font-size: 11px; color: var(--text-muted); }
+.ms-selectall-row { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-bottom: 1px solid var(--border);
+  background: var(--surface-2); font-size: 12px; font-weight: 700; cursor: pointer; user-select: none; }
+.ms-selectall-row:hover { background: #f0f4f8; }
+.ms-list { max-height: 220px; overflow-y: auto; padding: 4px; }
+.ms-item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 6px; font-size: 12.5px;
+  cursor: pointer; user-select: none; transition: background .1s; }
+.ms-item:hover { background: var(--surface-2); }
+.ms-item.checked { background: var(--accent-light); }
+.ms-item input[type=checkbox], .ms-selectall-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer;
+  accent-color: var(--accent); flex-shrink: 0; }
+.ms-item .ms-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-empty { padding: 18px; text-align: center; font-size: 12px; color: var(--text-muted); }
+.ms-chips-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ms-chips-row:empty { display: none; }
+.chips-label { font-size: 11.5px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; }
+.ms-chip { display: flex; align-items: center; gap: 5px; background: var(--accent-light); color: var(--accent-dark);
+  border: 1px solid #bfdbfe; border-radius: 20px; padding: 3px 6px 3px 10px; font-size: 11.5px; font-weight: 600; }
+.ms-chip button { border: none; background: rgba(37,99,235,.15); color: var(--accent-dark); width: 16px; height: 16px;
+  border-radius: 50%; font-size: 11px; cursor: pointer; line-height: 1; font-family: inherit; }
+.ms-chip button:hover { background: var(--accent); color: #fff; }
+
+/* صف الجدول */
+.tbl-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px;
+  background: var(--surface-2); cursor: pointer; user-select: none; transition: background .12s; flex-wrap: wrap; }
+.tbl-bar:hover { background: #f0f4f8; }
+.tbl-bar-right, .tbl-bar-left { display: flex; align-items: center; gap: 8px; }
+.tbl-toggle { font-size: 13px; color: var(--text-muted); transition: transform .25s; }
+.tbl-toggle.open { transform: rotate(180deg); }
+.results-wrap { display: flex; align-items: center; gap: 8px; }
+.results-label { font-size: 14px; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
+.results-count { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 34px;
+  padding: 0 10px; font-family: var(--font-mono); font-size: 17px; font-weight: 800; color: var(--purple);
+  background: var(--purple-light); border: 1.5px solid var(--purple-border); border-radius: var(--radius-sm); }
+.act-btn { display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all .15s; white-space: nowrap;
+  border: 1px solid var(--green-border); color: var(--green); background: var(--green-light); }
+.act-btn:hover:not(:disabled) { background: var(--green); color: #fff; }
+.act-btn:disabled { opacity: .5; cursor: not-allowed; }
+.tbl-body-wrap { max-height: 3000px; overflow: hidden; transition: max-height .3s ease; border-radius: 0 0 var(--radius) var(--radius); }
+.tbl-body-wrap.collapsed { max-height: 0; }
+.tbl-scroll { overflow-x: auto; border-radius: 0 0 var(--radius) var(--radius); }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.data-table thead th { text-align: center; background: var(--surface-2); color: var(--text-secondary); font-weight: 700;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .3px; padding: 10px 8px;
+  border-bottom: 2px solid var(--border-strong); white-space: nowrap; }
+.data-table tbody td { text-align: center; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table thead th, .data-table tbody td { border-inline-start: 1px solid var(--border); }
+.data-table thead th:first-child, .data-table tbody td:first-child { border-inline-start: none; }
+.data-table tbody tr:hover { background: var(--surface-2); }
+.data-table .empty-row td { padding: 40px; color: var(--text-muted); font-size: 13px; }
+.col-num { font-family: var(--font-mono); direction: ltr; white-space: nowrap; }
+.col-wrap { white-space: normal; min-width: 180px; }
+.sortable-th { cursor: pointer; user-select: none; transition: background .12s, color .12s; }
+.sortable-th:hover { background: var(--accent-light); color: var(--accent-dark); }
+.sortable-th.sorted { background: var(--accent-light); color: var(--accent-dark); }
+.sort-icon { display: inline-block; font-size: 10px; color: var(--accent); font-weight: 900; }
+.sort-icon.active { margin-inline-start: 4px; }
+
+.log-type-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.log-type-cancel { background: var(--green-light); color: #15803d; }
+.log-type-failed { background: var(--red-light); color: var(--red); }
+.log-type-other  { background: var(--bg); color: var(--text-muted); }
+.res-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.res-success { background: var(--green-light); color: #15803d; }
+.res-warning { background: var(--amber-light); color: var(--amber); }
+.res-error   { background: var(--red-light); color: var(--red); }
+
+.pagination-row { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; flex-wrap: wrap; }
+.page-info { font-size: 13px; color: var(--text-secondary); font-family: var(--font-mono); padding: 0 8px; }
+.page-btn { padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface);
+  font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--text-primary);
+  transition: background .15s, border-color .15s; }
+.page-btn:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.page-btn:disabled { opacity: .4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -282,8 +495,9 @@ body {
 <div class="container">
 
   <!-- ══════════════════════════════════════════════════════════
-       §HEADER
+       §HEADER — جوّه sticky wrapper مع شريط التابات (tabs-and-modals.md §1b)
        ══════════════════════════════════════════════════════════ -->
+  <div class="sticky-header-wrap" id="stickyWrap">
   <div class="app-header">
     <div class="app-title">
       <div class="app-icon">🚫</div>
@@ -292,6 +506,13 @@ body {
         <span>إلغاء أوردر قبل الشحن — Order Cancel</span>
       </div>
     </div>
+
+    <!-- Chip التاب الحالي — بيظهر بس وقت الـ Sticky (شريط التابات بيتقفل) -->
+    <div class="active-tab-chip" id="activeTabChip" onclick="toggleTabChipMenu(event)">
+      <span id="activeTabChipLabel">🚫 إلغاء أوردر</span><span class="chip-arrow">▾</span>
+      <div class="tab-chip-menu" id="tabChipMenu"></div>
+    </div>
+
     <div class="app-header-btns">
       <button class="hbtn warn" id="verMismatchBtn" style="display:none;" onclick="showVersionMismatch()">⚠️ نسخة الـ Worker مختلفة</button>
       <button class="hbtn active-user" id="activeUserBtn" onclick="doLogout()">👤 —</button>
@@ -301,9 +522,16 @@ body {
     </div>
   </div>
 
+  <div class="main-tabs-bar" id="mainTabsBar">
+    <button class="main-tab-btn active" id="tabMain" onclick="switchMainTab('main')">🚫 إلغاء أوردر</button>
+    <button class="main-tab-btn" id="tabLog" onclick="switchMainTab('log')">📜 سجل العمليات</button>
+  </div>
+  </div><!-- /.sticky-header-wrap -->
+
   <!-- ══════════════════════════════════════════════════════════
        §TOOL-CONTENT
        ══════════════════════════════════════════════════════════ -->
+  <div class="tab-panel active" id="panelMain">
   <div class="card">
     <div class="search-row">
       <input type="text" class="field-input" id="orderInput"
@@ -319,6 +547,173 @@ body {
       <div class="empty-state">ابحث عن أوردر للبدء</div>
     </div>
   </div>
+  </div><!-- /#panelMain -->
+
+  <!-- ══════════════════════════════════════════════════════════
+       §LOG — تاب سجل العمليات (data-table-standard.md)
+       ══════════════════════════════════════════════════════════ -->
+  <div class="tab-panel" id="panelLog">
+    <div class="unified-section">
+
+      <!-- هيدر الفلاتر: سهم الطي أول عنصر أقصى اليمين + أيقونة بدون كلمة "الفلاتر" -->
+      <div class="flt-header" onclick="toggleLogFilters()">
+        <div class="flt-header-right">
+          <span class="flt-toggle open" id="fltToggleIcon">▲</span>
+          <svg class="flt-icon" id="fltIcon" viewBox="0 0 36 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="2 3 13 3 8.3 10.2 8.3 19 6.7 19 6.7 10.2 2 3"></polygon>
+            <line x1="18" y1="5"  x2="33" y2="5"></line>
+            <line x1="18" y1="11" x2="29" y2="11"></line>
+            <line x1="18" y1="17" x2="25" y2="17"></line>
+          </svg>
+        </div>
+        <button class="clear-btn inactive" id="clearAllBtn"
+                onclick="event.stopPropagation(); clearAllLogFilters();">✕ مسح كل الفلاتر</button>
+      </div>
+
+      <div class="flt-body" id="fltBody">
+
+        <!-- صف 1 — فلاتر الاختيار المتعدد -->
+        <div class="flt-row">
+          <div class="flt-g">
+            <span class="flt-lbl">الموظف</span>
+            <div class="ms-wrap" id="msWrap-emp">
+              <button class="ms-btn" id="msBtn-emp" data-default-label="كل الموظفين" onclick="msToggle('emp')">
+                <span id="msBtnLabel-emp">كل الموظفين</span><span class="ms-arrow">▾</span>
+              </button>
+              <div class="ms-menu" id="msMenu-emp">
+                <div class="ms-ftr-top">
+                  <button class="ms-ftr-clear" onclick="msClear('emp')">مسح الاختيار</button>
+                  <span class="ms-ftr-count" id="msFtrCount-emp"></span>
+                </div>
+                <div class="ms-selectall-row" onclick="msToggleSelectAll('emp')">
+                  <input type="checkbox" id="msSelectAll-emp" onclick="event.stopPropagation()"
+                         onchange="msToggleSelectAll('emp', this.checked)">
+                  <span id="msSelectAllLabel-emp">تحديد الكل</span>
+                </div>
+                <div class="ms-list" id="msList-emp"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flt-g">
+            <span class="flt-lbl">نوع العملية</span>
+            <div class="ms-wrap" id="msWrap-type">
+              <button class="ms-btn" id="msBtn-type" data-default-label="كل العمليات" onclick="msToggle('type')">
+                <span id="msBtnLabel-type">كل العمليات</span><span class="ms-arrow">▾</span>
+              </button>
+              <div class="ms-menu" id="msMenu-type">
+                <div class="ms-ftr-top">
+                  <button class="ms-ftr-clear" onclick="msClear('type')">مسح الاختيار</button>
+                  <span class="ms-ftr-count" id="msFtrCount-type"></span>
+                </div>
+                <div class="ms-selectall-row" onclick="msToggleSelectAll('type')">
+                  <input type="checkbox" id="msSelectAll-type" onclick="event.stopPropagation()"
+                         onchange="msToggleSelectAll('type', this.checked)">
+                  <span id="msSelectAllLabel-type">تحديد الكل</span>
+                </div>
+                <div class="ms-list" id="msList-type"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- صف 2 — بحث ← فترة سريعة ← من ← إلى -->
+        <div class="flt-row">
+          <div class="flt-g" style="flex:1;min-width:200px;">
+            <span class="flt-lbl">بحث برقم الأوردر أو الملاحظات</span>
+            <div class="search-wrap">
+              <input type="text" class="search-input" id="logSearchInput" oninput="onLogSearchInput(this)">
+              <span class="search-icon">🔍</span>
+            </div>
+          </div>
+          <div class="flt-g">
+            <span class="flt-lbl">فترة سريعة</span>
+            <div class="preset-wrap" id="presetWrap">
+              <button class="preset-btn" id="presetBtn" onclick="togglePresetMenu(event)">
+                <span id="presetLabel">⚡ اختار فترة</span><span class="pr-arrow">▾</span>
+              </button>
+              <div class="preset-menu" id="presetMenu">
+                <div class="preset-item clear-item" onclick="resetDateFilter(true)">✕ مسح الاختيار</div>
+                <div class="preset-sep"></div>
+                <div class="preset-item" data-preset="today"     onclick="applyPreset('today')"><span>اليوم</span><span class="pr-check">✓</span></div>
+                <div class="preset-item" data-preset="yesterday" onclick="applyPreset('yesterday')"><span>أمس</span><span class="pr-check">✓</span></div>
+                <div class="preset-sep"></div>
+                <div class="preset-item" data-preset="last7"     onclick="applyPreset('last7')"><span>آخر 7 أيام</span><span class="pr-check">✓</span></div>
+                <div class="preset-item" data-preset="last30"    onclick="applyPreset('last30')"><span>آخر 30 يوم</span><span class="pr-check">✓</span></div>
+                <div class="preset-item" data-preset="last90"    onclick="applyPreset('last90')"><span>آخر 90 يوم</span><span class="pr-check">✓</span></div>
+                <div class="preset-sep"></div>
+                <div class="preset-item" data-preset="thisMonth" onclick="applyPreset('thisMonth')"><span>الشهر الحالي</span><span class="pr-check">✓</span></div>
+                <div class="preset-item" data-preset="lastMonth" onclick="applyPreset('lastMonth')"><span>الشهر السابق</span><span class="pr-check">✓</span></div>
+                <div class="preset-sep"></div>
+                <div class="preset-item" data-preset="thisYear"  onclick="applyPreset('thisYear')"><span>العام الحالي</span><span class="pr-check">✓</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="flt-g">
+            <span class="flt-lbl">من تاريخ</span>
+            <input type="date" class="date-input" id="dateFromInput"
+                   onchange="onDateInputChange()" onclick="this.showPicker&&this.showPicker();">
+          </div>
+          <div class="flt-g">
+            <span class="flt-lbl">إلى تاريخ</span>
+            <input type="date" class="date-input" id="dateToInput"
+                   onchange="onDateInputChange()" onclick="this.showPicker&&this.showPicker();">
+          </div>
+        </div>
+
+        <!-- صف 3+ — chips: سطر منفصل لكل فلتر، واسم الفلتر مرة واحدة في أوله -->
+        <div class="ms-chips-row" id="chipsRow-emp"></div>
+        <div class="ms-chips-row" id="chipsRow-type"></div>
+        <div class="ms-chips-row" id="chipsRow-date"></div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- صف الجدول -->
+      <div class="tbl-bar" onclick="toggleLogTable()">
+        <div class="tbl-bar-right">
+          <span class="tbl-toggle open" id="tblToggleIcon">▲</span>
+          <div class="results-wrap">
+            <span class="results-label">النتائج:</span>
+            <span class="results-count" id="logResultsCount">—</span>
+          </div>
+        </div>
+        <div class="tbl-bar-left">
+          <button class="act-btn" onclick="event.stopPropagation(); fetchLog();">↺ تحديث</button>
+          <button class="act-btn" id="logExportBtn" onclick="event.stopPropagation(); exportLogXLSX();">⬇ تصدير XLSX</button>
+        </div>
+      </div>
+
+      <div class="tbl-body-wrap" id="tblBodyWrap">
+        <div class="tbl-scroll">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="sortable-th" data-sort-key="date" onclick="toggleSort('date')">التاريخ<span class="sort-icon" data-sort-key="date"></span></th>
+                <th class="sortable-th" data-sort-key="time" onclick="toggleSort('time')">الوقت<span class="sort-icon" data-sort-key="time"></span></th>
+                <th class="sortable-th" data-sort-key="employee" onclick="toggleSort('employee')">الموظف<span class="sort-icon" data-sort-key="employee"></span></th>
+                <th class="sortable-th" data-sort-key="type" onclick="toggleSort('type')">نوع العملية<span class="sort-icon" data-sort-key="type"></span></th>
+                <th class="sortable-th" data-sort-key="orderName" onclick="toggleSort('orderName')">الأوردر<span class="sort-icon" data-sort-key="orderName"></span></th>
+                <th class="sortable-th" data-sort-key="reason" onclick="toggleSort('reason')">سبب الإلغاء<span class="sort-icon" data-sort-key="reason"></span></th>
+                <th class="sortable-th" data-sort-key="result" onclick="toggleSort('result')">النتيجة<span class="sort-icon" data-sort-key="result"></span></th>
+                <th>ملاحظات</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody">
+              <tr class="empty-row"><td colspan="8">افتح التاب لتحميل السجل</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination-row" id="paginationRow" style="display:none;">
+          <button class="page-btn" id="btnPrevPage" onclick="goLogPage(-1)">→ السابق</button>
+          <span class="page-info" id="pageInfo"></span>
+          <button class="page-btn" id="btnNextPage" onclick="goLogPage(1)">التالي ←</button>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /#panelLog -->
 
   <!-- ══════════════════════════════════════════════════════════
        §SETTINGS MODAL
@@ -363,6 +758,9 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>تاب سجل العمليات</b> — جدول بمعيار EcomModa الموحّد: فلاتر multi-select (الموظف · نوع العملية) + فلتر فترة + بحث + ترتيب على الأعمدة + ترقيم صفحات (100/صفحة) + تصدير XLSX لكل النتائج المطابقة للفلاتر</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>شريط تابات رئيسي + تثبيت الهيدر عند السكرول (الشريط بيتقفل وبيظهر بدله chip باسم التاب الحالي)</span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span>عرض الأداة اتوسّع من 1040px لـ 1200px — أي أداة فيها جدول سجل مايجوزش تفضل على العرض الصغير</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>"لسه قيد التأكيد" كانت بتظهر على إلغاء ناجح</b> — الأداة كانت بتقرا الأوردر تاني فورًا بعد الإلغاء، و<code>orderCancel</code> ميوتيشن غير متزامنة. دلوقتي بتستنى الـ Job يخلص (≈٦ ثوانٍ بحد أقصى) قبل ما تحكم (Worker v2.4.0)</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>زرار <b>🔄 تحقق من شوبيفاي الآن</b> جوه البانر الأصفر — بيعيد قراءة الأوردر وبيحوّل البانر لأخضر لو الإلغاء اتأكد، من غير ما الموظف يفتح شوبيفاي</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>البحث بالـ Order ID الطويل (زي 7186861523266) بقى شغّال — قبل كده كان بيقول "لم يتم العثور على الأوردر" والرابط الكامل بس هو اللي بيشتغل (Worker v2.3.0)</span></li>
@@ -434,8 +832,13 @@ body {
               <li>الأداة تعرض اسم العميل، التليفون، العنوان بالتفصيل، الـ chips الأربعة (حالة الأوردر S1 · حالة الدفع · حالة الشحن · حالة الاسترجاع/الاستبدال)، وحالة الأهلية للإلغاء (✅/⛔)</li>
               <li>لو مؤهل، الموظف يختار سبب الإلغاء من القائمة (بتتقرأ لايف من ميتافيلد شوبيفاي)</li>
               <li>ضغط "إلغاء الأوردر" بيفتح نافذة تأكيد نهائية — وفيها إقرار إبلاغ الشحن/المخزن لو الأوردر Confirmed أو Ready</li>
-              <li>بعد التأكيد: الأداة بتلغي الأوردر على شوبيفاي (restock + السبب مسجّل)، وبتتحقق فعليًا إن الإلغاء اتسجّل قبل ما تقول "تم"</li>
+              <li>بعد التأكيد: الأداة بتلغي الأوردر على شوبيفاي (restock + السبب مسجّل)، وبتستنى الـ Job وتتحقق فعليًا إن <code>cancelledAt</code> اتسجّل قبل ما تقول "تم"</li>
+              <li>كل عملية (ناجحة أو فاشلة) بتتسجّل في D1، وبتظهر في <b>تاب سجل العمليات</b></li>
             </ol>
+
+            <h4>تاب سجل العمليات</h4>
+            <p>جدول بمعيار <code>data-table-standard</code>: أعمدة التاريخ · الوقت · الموظف · نوع العملية · الأوردر (لينك لشوبيفاي) · سبب الإلغاء · النتيجة · ملاحظات. الفلاتر كلها <b>اختيار متعدد</b> (الموظف · نوع العملية) + فترة + بحث، والترتيب على الأعمدة مستقل تمامًا عن الفلاتر (3 حالات: تصاعدي → تنازلي → بلا ترتيب).</p>
+            <p><b>الفلترة كلها server-side</b> — يعني عدّاد "النتائج" وترقيم الصفحات بيوصفوا <b>كل</b> الصفوف المطابقة في D1، مش الصفحة المعروضة بس. التصدير كمان بينزّل كل المطابق (لحد 2000 صف)، مش الصفحة الحالية. <code>login</code> و<code>logout</code> مستبعدين في الـ SQL نفسه.</p>
 
             <h4>الـ Endpoints الرئيسية</h4>
             <table>
@@ -444,7 +847,10 @@ body {
               <tr><td><code>cancel_order</code></td><td>تنفيذ الإلغاء + restock + تسجيل السبب + تحقق بعدي</td></tr>
               <tr><td><code>diag</code></td><td>فحص صلاحيات شوبيفاي (write_orders / read_returns / write_returns)</td></tr>
               <tr><td><code>get_config</code></td><td>مقارنة نسخة الـ Worker مع الواجهة</td></tr>
-              <tr><td><code>get_employees</code></td><td>قائمة الموظفين النشطين — بتملا قائمة شاشة الدخول</td></tr>
+              <tr><td><code>get_employees</code></td><td>قائمة الموظفين النشطين — بتملا قائمة شاشة الدخول <b>وفلتر الموظف في تاب السجل</b> (نفس المصدر، مفيش قائمة تانية)</td></tr>
+              <tr><td><code>get_logs</code></td><td>صفحة واحدة من السجل (100 صف) — فلترة server-side بالكامل: موظفين · أنواع · بحث · فترة</td></tr>
+              <tr><td><code>get_logs_count</code></td><td>عدد الصفوف المطابقة للفلتر — بيغذّي شبشة "النتائج" وترقيم الصفحات</td></tr>
+              <tr><td><code>get_logs_export</code></td><td>كل الصفوف المطابقة (لحد 2000) — للتصدير بس، مش الصفحة الحالية</td></tr>
             </table>
           </div>
         </details>
@@ -458,6 +864,9 @@ body {
               <li><code>§TOOL-JS</code> — بحث الأوردر، عرض الأهلية، اختيار السبب، تأكيد الإلغاء، عرض النتيجة (3 حالات)</li>
               <li><code>renderOrderCard()</code> — بتحسب الأهلية من 5 شروط وبتبني الـ chips الأربعة. لو الـ Worker أقدم من v2.3.0 وما بعتش <code>canCancelByFulfillmentStatus</code>، بتحسبها محليًا من <code>displayFulfillmentStatus</code> بدل ما تفترض "مسموح"</li>
               <li><code>openCancelConfirm()</code> / <code>onWarehouseAckChange()</code> — إقرار إبلاغ الشحن/المخزن + قفل زرار التنفيذ</li>
+              <li><code>§TABS-JS</code> — التابات الرئيسية + تثبيت الهيدر عند السكرول (عتبتان + rAF throttle، منعًا للفليكر)</li>
+              <li><code>§DATETIME</code> — <code>toCairo</code> · <code>formatDate</code> · <code>formatTimeOnly</code> · <code>formatDateForExport</code> · <code>formatTimeForExport</code></li>
+              <li><code>§LOG-JS</code> — تاب السجل: multi-select · فلتر الفترة · البحث · الترتيب · الترقيم · التصدير</li>
               <li><code>recheckCancelStatus()</code> — تحقق يدوي من البانر الأصفر عبر <code>lookup_order</code>، بيحوّله لأخضر لو <code>alreadyCancelled</code>. ما بيحوّلوش لأحمر أبدًا — الـ Job ممكن يكون لسه شغال</li>
             </ul>
 
@@ -470,11 +879,15 @@ body {
               <li><code>liveCancelReasons</code> — قائمة الأسباب اللي جاية من lookup_order، بتتغيّر كل بحث</li>
               <li><code>WAREHOUSE_ACK_STATUSES = ['Confirmed','Ready']</code> — الحالات اللي بتطلب إقرار الإبلاغ</li>
               <li><code>FINANCIAL_STATUS_AR</code> · <code>FULFILLMENT_STATUS_AR</code> — ترجمة حالات شوبيفاي، نسخة احتياطية لو الـ Worker أقدم من v2.3.0</li>
+              <li><code>msState</code> — حالة فلاتر السجل (<code>emp</code> · <code>type</code>): العناصر + المختار + بحث القائمة</li>
+              <li><code>LOG_PAGE_SIZE = 100</code> · <code>sortState { key, dir }</code> · <code>dateFilterActive</code></li>
             </ul>
 
             <h4>NOTES</h4>
             <ul>
-              <li>مفيش Log Tab في النسخة دي — الـ Worker بيسجّل في D1 عادي (tool=order_cancel) وممكن يتراجع من أداة تانية أو مستقبلًا لو احتجنا تاب سجل هنا</li>
+              <li><b>عمود "النتيجة" بيقرا <code>extra.result</code>.</b> الصفوف اللي اتكتبت قبل Worker v2.5.0 مالهاش الحقل ده، فبتتعرض "—" مش "✓" — إحنا فعليًا مش عارفين إن كانت اتأكدت وقتها ولا لأ</li>
+              <li><b>حدود فلتر التاريخ بتوقيت UTC</b> زي ما الـ timestamp متخزّن في D1، والعرض بتوقيت القاهرة (UTC+3). فرق التلات ساعات ممكن يخلي عملية بعد ٩ مساءً بتوقيت القاهرة تقع في يوم UTC اللي بعده — مقبول لفلتر بالأيام، ومكتوب هنا عشان مايتكتشفش كباج</li>
+              <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code>) — امتداد مقصود على النسخة القياسية لدوال السجل، عشان الفلاتر multi-select. من غيره كانت الفلترة هتبقى على الصفحة المحمّلة بس وعدّاد النتائج يكدب</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
               <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها إن الـ Worker استنى الـ Job بتاع <code>orderCancel</code> لمدة ≈٦ ثوانٍ (backoff متصاعد 400→2200ms) و<code>cancelledAt</code> لسه ما اتسجّلش. دي <b>"ما قدرناش نتأكد"</b> — مش "تم" ومش "فشل". الـ Job بيكمل لوحده في الغالب، فالبانر فيه زرار <code>recheckCancelStatus()</code> بيعيد القراءة ويحوّله لأخضر لو اتأكد. لو فضلت صفرا بعد كذا محاولة، افتح الأوردر في شوبيفاي</li>
               <li>سطر الدولة (Egypt) متشال من عنوان الشحن عمدًا — كل الأوردرات محلية والسطر ما بيضيفش معلومة. لو اتفتح بيع دولي، السطر لازم يرجع</li>
@@ -573,7 +986,7 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.2.0';
+const TOOL_VERSION = 'v1.3.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -765,6 +1178,7 @@ async function loadEmployeesList() {
   try {
     const data      = await apiGet('get_employees');
     const employees = data.employees || [];
+    fillLogEmployeeFilter(employees);   // نفس المصدر — فلتر السجل مايجيبش قائمة تانية
     employees.forEach(e => {
       const o = document.createElement('option');
       o.value = e.username; o.textContent = e.display_name;
@@ -965,6 +1379,16 @@ async function doLogout() {
   document.getElementById('orderInput').value = '';
   document.getElementById('orderArea').innerHTML = '<div class="empty-state">ابحث عن أوردر للبدء</div>';
   document.getElementById('activeUserBtn').textContent = '👤 —';
+
+  // السجل: صفّر البيانات والفلاتر ورجّع التاب الأساسي — الموظف اللي بعده
+  // مايشوفش نتايج الفلاتر بتاعة اللي قبله
+  logLoaded = false; logRows = []; logTotalCount = 0; logCurrentPage = 1;
+  clearAllLogFiltersSilent();
+  document.getElementById('logTableBody').innerHTML =
+    '<tr class="empty-row"><td colspan="8">افتح التاب لتحميل السجل</td></tr>';
+  document.getElementById('logResultsCount').textContent = '—';
+  document.getElementById('paginationRow').style.display = 'none';
+  switchMainTab('main');
 
   document.getElementById('loginOverlay').classList.remove('hidden');
 }
@@ -1238,12 +1662,539 @@ async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
   }
 }
 
-// ── Init ──────────────────────────────────────────────────────
+
+
+// ══════════════════════════════════════════════════════════════
+// §DATETIME — الصيغة الموحّدة (datetime-format.md)
+// كل عرض بتوقيت القاهرة (UTC+3) عن طريق toCairo() + getUTC*()
+// ══════════════════════════════════════════════════════════════
+function toCairo(iso) { return new Date(new Date(iso).getTime() + 3 * 60 * 60 * 1000); }
+
+function formatDateTime(iso) {
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  let h = d.getUTCHours();
+  const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
+  h = h % 12 || 12;
+  return `📅 ${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()} 🕐 ${pad(h)}:${pad(d.getUTCMinutes())} ${ampm}`;
+}
+function formatDate(iso) {
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  return `📅 ${pad(d.getUTCDate())}/${pad(d.getUTCMonth()+1)}/${d.getUTCFullYear()}`;
+}
+function formatTimeOnly(iso) {
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  let h = d.getUTCHours();
+  const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
+  h = h % 12 || 12;
+  return `🕐 ${pad(h)}:${pad(d.getUTCMinutes())} ${ampm}`;
+}
+// أعمدة XLSX — بدون إيموجي (الإيموجي بيكسر الفرز والفلترة جوّه الشيت)
+function formatDateForExport(iso) {
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getUTCDate())}-${pad(d.getUTCMonth()+1)}-${d.getUTCFullYear()}`;
+}
+function formatTimeForExport(iso) {
+  const d = toCairo(iso), pad = n => String(n).padStart(2, '0');
+  let h = d.getUTCHours();
+  const ampm = h >= 12 ? 'مساءً' : 'صباحاً';
+  h = h % 12 || 12;
+  return `${pad(h)}:${pad(d.getUTCMinutes())} ${ampm}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// §TABS-JS — التابات الرئيسية + Freeze on Scroll (tabs-and-modals.md §1b)
+// ══════════════════════════════════════════════════════════════
+const TAB_IDS = ['main', 'log'];
+let currentTab = 'main';
+
+function switchMainTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabMain').classList.toggle('active', tab === 'main');
+  document.getElementById('tabLog').classList.toggle('active', tab === 'log');
+  document.getElementById('panelMain').classList.toggle('active', tab === 'main');
+  document.getElementById('panelLog').classList.toggle('active', tab === 'log');
+  if (tab === 'log' && !logLoaded) fetchLog();   // lazy load
+  updateTabChip();
+  closeTabChipMenu();
+}
+
+// عتبتان (hysteresis) + rAF throttle — عتبة واحدة بتعمل فليكر حوالين نقطة القفل
+const STICK_ON = 40, STICK_OFF = 12;
+let stickyRafPending = false;
+function onPageScroll() {
+  if (stickyRafPending) return;
+  stickyRafPending = true;
+  requestAnimationFrame(() => {
+    stickyRafPending = false;
+    const wrap = document.getElementById('stickyWrap');
+    if (!wrap) return;
+    const y = window.scrollY, isStuck = wrap.classList.contains('stuck');
+    if (!isStuck && y > STICK_ON) wrap.classList.add('stuck');
+    else if (isStuck && y < STICK_OFF) wrap.classList.remove('stuck');
+  });
+}
+window.addEventListener('scroll', onPageScroll, { passive: true });
+
+function updateTabChip() {
+  const btn = document.getElementById(currentTab === 'main' ? 'tabMain' : 'tabLog');
+  document.getElementById('activeTabChipLabel').textContent = btn.textContent.trim();
+  document.querySelectorAll('#tabChipMenu .tab-chip-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === currentTab);
+  });
+}
+function buildTabChipMenu() {
+  document.getElementById('tabChipMenu').innerHTML = TAB_IDS.map(id => {
+    const btn = document.getElementById(id === 'main' ? 'tabMain' : 'tabLog');
+    return `<div class="tab-chip-item ${id === currentTab ? 'active' : ''}" data-tab="${id}"
+      onclick="event.stopPropagation(); switchMainTab('${id}');">${btn.textContent.trim()}</div>`;
+  }).join('');
+}
+function toggleTabChipMenu(e) {
+  e.stopPropagation();
+  const chip = document.getElementById('activeTabChip'), menu = document.getElementById('tabChipMenu');
+  const willOpen = !menu.classList.contains('open');
+  menu.classList.toggle('open', willOpen);
+  chip.classList.toggle('open', willOpen);
+}
+function closeTabChipMenu() {
+  document.getElementById('tabChipMenu')?.classList.remove('open');
+  document.getElementById('activeTabChip')?.classList.remove('open');
+}
+
+// ══════════════════════════════════════════════════════════════
+// §LOG-JS — تاب سجل العمليات (data-table-standard.md)
+// ══════════════════════════════════════════════════════════════
+const LOG_PAGE_SIZE = 100;
+let logLoaded = false;
+let logRows = [];            // صفوف الصفحة الحالية (مبنية، مش خام)
+let logTotalCount = 0;
+let logCurrentPage = 1;
+let logSearchTimer = null;
+let logFiltersOpen = true, logTableOpen = true;
+
+const LOG_TYPE_LABELS = { cancel: 'إلغاء ناجح', cancel_failed: 'محاولة إلغاء فاشلة' };
+
+// ─── §LOG-JS::multiSelect (multi-select-filter.md) ───
+const msState = {
+  emp:  { items: [], selected: new Set(), search: '' },
+  type: { items: Object.keys(LOG_TYPE_LABELS).map(v => ({ value: v, label: LOG_TYPE_LABELS[v] })),
+          selected: new Set(), search: '' },
+};
+const filterLabels = { emp: 'الموظف', type: 'نوع العملية', date: 'الفترة' };
+
+function msRenderList(key) {
+  const st = msState[key];
+  const listEl = document.getElementById(`msList-${key}`);
+  const q = st.search.trim().toLowerCase();
+  const visible = q ? st.items.filter(it => it.label.toLowerCase().includes(q)) : st.items;
+
+  listEl.innerHTML = !visible.length
+    ? '<div class="ms-empty">لا توجد عناصر</div>'
+    : visible.map(it => {
+        const checked = st.selected.has(it.value);
+        return `<div class="ms-item ${checked ? 'checked' : ''}" onclick="msToggleItem('${key}','${it.value}')">
+          <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation(); msToggleItem('${key}','${it.value}')">
+          <span class="ms-item-label">${it.label}</span></div>`;
+      }).join('');
+
+  const allVisibleChecked = visible.length > 0 && visible.every(it => st.selected.has(it.value));
+  document.getElementById(`msSelectAll-${key}`).checked = allVisibleChecked;
+  msUpdateButtonLabel(key);
+  document.getElementById(`msFtrCount-${key}`).textContent = `${st.selected.size} مختار`;
+}
+
+function msUpdateButtonLabel(key) {
+  const st = msState[key];
+  const btn = document.getElementById(`msBtn-${key}`), lbl = document.getElementById(`msBtnLabel-${key}`);
+  const n = st.selected.size;
+  btn.classList.toggle('has-selection', n > 0);
+  if (n === 0) { lbl.textContent = btn.dataset.defaultLabel || 'الكل'; }
+  else if (n === 1) {
+    const item = st.items.find(it => it.value === [...st.selected][0]);
+    lbl.textContent = item ? item.label : [...st.selected][0];
+  } else { lbl.innerHTML = `${n} محددين <span class="ms-count">${n}</span>`; }
+}
+
+function msToggle(key) {
+  const menu = document.getElementById(`msMenu-${key}`), btn = document.getElementById(`msBtn-${key}`);
+  const willOpen = !menu.classList.contains('open');
+  Object.keys(msState).forEach(k => {
+    document.getElementById(`msMenu-${k}`).classList.remove('open');
+    document.getElementById(`msBtn-${k}`).classList.remove('open');
+  });
+  if (willOpen) { menu.classList.add('open'); btn.classList.add('open'); }
+}
+function msToggleItem(key, value) {
+  const st = msState[key];
+  st.selected.has(value) ? st.selected.delete(value) : st.selected.add(value);
+  msRenderList(key); renderChips(); onLogFilterChanged();
+}
+function msToggleSelectAll(key, forceState) {
+  const st = msState[key];
+  const q = st.search.trim().toLowerCase();
+  const visible = q ? st.items.filter(it => it.label.toLowerCase().includes(q)) : st.items;
+  const allVisibleChecked = visible.length > 0 && visible.every(it => st.selected.has(it.value));
+  const shouldCheck = forceState !== undefined ? forceState : !allVisibleChecked;
+  visible.forEach(it => shouldCheck ? st.selected.add(it.value) : st.selected.delete(it.value));
+  msRenderList(key); renderChips(); onLogFilterChanged();
+}
+function msClear(key) {
+  msState[key].selected.clear();
+  msRenderList(key); renderChips(); onLogFilterChanged();
+}
+document.addEventListener('click', (e) => {
+  Object.keys(msState).forEach(k => {
+    const wrap = document.getElementById(`msWrap-${k}`);
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById(`msMenu-${k}`).classList.remove('open');
+      document.getElementById(`msBtn-${k}`).classList.remove('open');
+    }
+  });
+  document.getElementById('presetMenu')?.classList.remove('open');
+  document.getElementById('presetBtn')?.classList.remove('open');
+  closeTabChipMenu();
+});
+
+// ─── §LOG-JS::chips — سطر لكل فلتر، واسم الفلتر مرة واحدة في أوله ───
+function renderChips() {
+  Object.keys(msState).forEach(key => {
+    const row = document.getElementById(`chipsRow-${key}`);
+    if (!row) return;
+    const chips = [...msState[key].selected].map(val => {
+      const item = msState[key].items.find(it => it.value === val);
+      const v = item ? item.label : val;
+      return `<span class="ms-chip">${v}<button onclick="msToggleItem('${key}','${val.replace(/'/g, "\\'")}')">✕</button></span>`;
+    }).join('');
+    row.innerHTML = chips ? `<span class="chips-label">${filterLabels[key]}:</span>${chips}` : '';
+  });
+  const dateRow = document.getElementById('chipsRow-date');
+  if (dateRow) {
+    const f = document.getElementById('dateFromInput').value, t = document.getElementById('dateToInput').value;
+    dateRow.innerHTML = (f || t)
+      ? `<span class="chips-label">${filterLabels.date}:</span><span class="ms-chip">${f || '…'} → ${t || '…'}<button onclick="resetDateFilter(true)">✕</button></span>`
+      : '';
+  }
+}
+
+// ─── §LOG-JS::filterState ───
+// ⚠️ !!value مش !== null — الخصائص اللي مش موجودة قيمتها undefined،
+// و undefined !== null بترجّع true فتفضل الفلاتر "مفعّلة" للأبد.
+function anyFilterActive() {
+  const msActive = Object.keys(msState).some(k => msState[k].selected.size > 0);
+  const search = document.getElementById('logSearchInput')?.value.trim() || '';
+  return msActive || !!search || dateFilterActive;
+}
+function updateFilterIconState() {
+  const active = anyFilterActive();
+  document.getElementById('fltIcon').classList.toggle('active', active);
+  document.getElementById('clearAllBtn').classList.toggle('inactive', !active);
+}
+function toggleLogFilters() {
+  logFiltersOpen = !logFiltersOpen;
+  document.getElementById('fltBody').classList.toggle('collapsed', !logFiltersOpen);
+  document.getElementById('fltToggleIcon').classList.toggle('open', logFiltersOpen);
+}
+function toggleLogTable() {
+  logTableOpen = !logTableOpen;
+  document.getElementById('tblBodyWrap').classList.toggle('collapsed', !logTableOpen);
+  document.getElementById('tblToggleIcon').classList.toggle('open', logTableOpen);
+}
+
+// ─── §LOG-JS::dateFilter — بدون فترة افتراضية (data-table-standard §5) ───
+let activePreset = '', dateFilterActive = false;
+const PRESET_LABELS = { today:'اليوم', yesterday:'أمس', last7:'آخر 7 أيام', last30:'آخر 30 يوم',
+  last90:'آخر 90 يوم', thisMonth:'الشهر الحالي', lastMonth:'الشهر السابق', thisYear:'العام الحالي' };
+
+function togglePresetMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('presetMenu'), btn = document.getElementById('presetBtn');
+  const isOpen = menu.classList.contains('open');
+  menu.classList.toggle('open', !isOpen); btn.classList.toggle('open', !isOpen);
+}
+function toLocalISO(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+function resetDateFilter(reload) {
+  activePreset = ''; dateFilterActive = false;
+  const f = document.getElementById('dateFromInput'), t = document.getElementById('dateToInput');
+  f.value = ''; t.value = '';
+  f.classList.remove('has-value'); t.classList.remove('has-value');
+  document.getElementById('presetLabel').textContent = '⚡ اختار فترة';
+  document.getElementById('presetBtn').classList.remove('has-preset');
+  document.querySelectorAll('.preset-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('presetMenu')?.classList.remove('open');
+  if (reload) { renderChips(); onLogFilterChanged(); }
+}
+function applyPreset(preset) {
+  document.getElementById('presetMenu').classList.remove('open');
+  document.getElementById('presetBtn').classList.remove('open');
+  const now = toCairo(new Date().toISOString());
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  let from, to;
+  switch (preset) {
+    case 'today':      from = to = today; break;
+    case 'yesterday': { const y = new Date(today); y.setUTCDate(y.getUTCDate() - 1); from = to = y; break; }
+    case 'last7':     { from = new Date(today); from.setUTCDate(from.getUTCDate() - 6);  to = today; break; }
+    case 'last30':    { from = new Date(today); from.setUTCDate(from.getUTCDate() - 29); to = today; break; }
+    case 'last90':    { from = new Date(today); from.setUTCDate(from.getUTCDate() - 89); to = today; break; }
+    case 'thisMonth':  from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)); to = today; break;
+    case 'lastMonth':  from = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+                       to   = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0)); break;
+    case 'thisYear':   from = new Date(Date.UTC(today.getUTCFullYear(), 0, 1)); to = today; break;
+    default: return;
+  }
+  const f = document.getElementById('dateFromInput'), t = document.getElementById('dateToInput');
+  f.value = toLocalISO(from); t.value = toLocalISO(to);
+  f.classList.add('has-value'); t.classList.add('has-value');
+  activePreset = preset; dateFilterActive = true;
+  document.querySelectorAll('.preset-item').forEach(el => el.classList.toggle('active', el.dataset.preset === preset));
+  document.getElementById('presetLabel').textContent = `⚡ ${PRESET_LABELS[preset]}`;
+  document.getElementById('presetBtn').classList.add('has-preset');
+  renderChips(); onLogFilterChanged();
+}
+function onDateInputChange() {
+  const f = document.getElementById('dateFromInput'), t = document.getElementById('dateToInput');
+  f.classList.toggle('has-value', !!f.value); t.classList.toggle('has-value', !!t.value);
+  dateFilterActive = !!(f.value || t.value);
+  activePreset = '';
+  document.querySelectorAll('.preset-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('presetLabel').textContent = dateFilterActive ? '⚡ فترة مخصصة' : '⚡ اختار فترة';
+  document.getElementById('presetBtn').classList.toggle('has-preset', dateFilterActive);
+  renderChips(); onLogFilterChanged();
+}
+
+function onLogSearchInput(el) {
+  el.classList.toggle('has-value', !!el.value.trim());
+  clearTimeout(logSearchTimer);
+  logSearchTimer = setTimeout(() => { logCurrentPage = 1; fetchLog(); }, 400);
+  updateFilterIconState();
+}
+function onLogFilterChanged() { logCurrentPage = 1; updateFilterIconState(); fetchLog(); }
+
+function clearAllLogFiltersSilent() {
+  Object.keys(msState).forEach(k => { msState[k].selected.clear(); msRenderList(k); });
+  const si = document.getElementById('logSearchInput');
+  si.value = ''; si.classList.remove('has-value');
+  resetDateFilter(false);
+  sortState = { key: null, dir: null }; updateSortHeaderUI();
+  logCurrentPage = 1;
+  renderChips(); updateFilterIconState();
+}
+function clearAllLogFilters() {
+  clearAllLogFiltersSilent();
+  onLogFilterChanged();
+}
+
+// ─── §LOG-JS::sort — 3 حالات، مستقل تمامًا عن الفلاتر ───
+const sortConfig = { date:{type:'date'}, time:{type:'date'}, employee:{type:'string'},
+  type:{type:'string'}, orderName:{type:'string'}, reason:{type:'string'}, result:{type:'string'} };
+let sortState = { key: null, dir: null };
+
+function toggleSort(key) {
+  if (sortState.key !== key) { sortState.key = key; sortState.dir = 'asc'; }
+  else if (sortState.dir === 'asc') { sortState.dir = 'desc'; }
+  else { sortState.key = null; sortState.dir = null; }
+  updateSortHeaderUI();
+  renderLogTable(applySort(logRows));
+}
+function updateSortHeaderUI() {
+  document.querySelectorAll('.sort-icon').forEach(el => {
+    const isActive = sortState.key === el.dataset.sortKey;
+    el.textContent = isActive ? (sortState.dir === 'asc' ? '▲' : '▼') : '';
+    el.classList.toggle('active', isActive);
+  });
+  document.querySelectorAll('.sortable-th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.sortKey === sortState.key);
+  });
+}
+function applySort(rows) {
+  if (!sortState.key) return rows;
+  const cfg = sortConfig[sortState.key], dir = sortState.dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {   // نسخة جديدة — ممنوع تعديل مصدر البيانات
+    const av = a[sortState.key], bv = b[sortState.key];
+    if (cfg.type === 'date') return ((av ? av.getTime() : 0) - (bv ? bv.getTime() : 0)) * dir;
+    return String(av ?? '').localeCompare(String(bv ?? ''), 'ar') * dir;
+  });
+}
+
+// ─── §LOG-JS::fetch ───
+function logQueryParams() {
+  const p = {};
+  const emps = [...msState.emp.selected], types = [...msState.type.selected];
+  const search = document.getElementById('logSearchInput').value.trim();
+  const from = document.getElementById('dateFromInput').value, to = document.getElementById('dateToInput').value;
+  if (emps.length)  p.employees = emps.join(',');
+  if (types.length) p.types = types.join(',');
+  if (search)       p.search = search;
+  if (from)         p.dateFrom = from;
+  if (to)           p.dateTo = to;
+  return p;
+}
+
+// اسم الموظف زي ما هو مكتوب في D1 = username. بنعرضه بالاسم الظاهر من
+// get_employees لو متاح، وإلا بنستبدل الـ underscores بمسافات كـ fallback.
+function employeeDisplayName(username) {
+  if (!username) return '';
+  const item = msState.emp.items.find(it => it.value === username);
+  return item ? item.label : username.replace(/_/g, ' ');
+}
+
+function parseExtra(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw); } catch (e) { return {}; }
+}
+
+function buildLogRow(e) {
+  const extra = parseExtra(e.extra);
+  const d = e.timestamp ? toCairo(e.timestamp) : null;
+  return {
+    date: d, time: d,                       // نفس الـ timestamp لعمودين مستقلين في الترتيب
+    iso: e.timestamp || null,
+    employee: employeeDisplayName(e.employee),
+    type: e.type || '',
+    orderName: e.order_name || '',
+    orderId: e.order_id || null,
+    reason: extra.reasonLabel || '',
+    // Step 3C — الصفوف الأقدم من Worker v2.5.0 مالهاش extra.result، وبتتعرض "—" مش "✓"
+    result: extra.result || '',
+    notes: e.notes || '',
+  };
+}
+
+async function fetchLog() {
+  const tbody = document.getElementById('logTableBody');
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="8">⏳ جارٍ التحميل...</td></tr>';
+  try {
+    const base = logQueryParams();
+    const [pageData, countData] = await Promise.all([
+      apiGet('get_logs', { ...base, limit: LOG_PAGE_SIZE, offset: (logCurrentPage - 1) * LOG_PAGE_SIZE }),
+      apiGet('get_logs_count', base),
+    ]);
+    if (!pageData.ok) throw new Error(pageData.error || 'تعذّر قراءة السجل');
+    logRows = (pageData.entries || []).map(buildLogRow);
+    logTotalCount = countData.ok ? (countData.total || 0) : 0;
+    logLoaded = true;
+    renderLogTable(applySort(logRows));
+    renderLogPagination();
+  } catch (err) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">⚠️ ${err.message}</td></tr>`;
+    document.getElementById('logResultsCount').textContent = '—';
+    document.getElementById('paginationRow').style.display = 'none';
+  }
+}
+
+function renderLogTable(rows) {
+  const tbody = document.getElementById('logTableBody');
+  document.getElementById('logResultsCount').textContent = logTotalCount.toLocaleString('en-US');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8">لا توجد نتائج تطابق الفلاتر المحددة</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const typeCls = r.type === 'cancel' ? 'log-type-cancel' : r.type === 'cancel_failed' ? 'log-type-failed' : 'log-type-other';
+    const typeHtml = `<span class="log-type-badge ${typeCls}">${LOG_TYPE_LABELS[r.type] || r.type || '—'}</span>`;
+    const resMap = { success: ['res-success', '✓ تم'], warning: ['res-warning', '⚠ قيد التأكيد'], error: ['res-error', '✗ فشل'] };
+    const res = resMap[r.result];
+    const resHtml = res ? `<span class="res-badge ${res[0]}">${res[1]}</span>` : '—';
+    const orderHtml = r.orderName ? orderLink(r.orderName, r.orderId) : '—';
+    return `<tr>
+      <td class="col-num">${r.iso ? formatDate(r.iso) : '—'}</td>
+      <td class="col-num">${r.iso ? formatTimeOnly(r.iso) : '—'}</td>
+      <td>${r.employee || '—'}</td>
+      <td>${typeHtml}</td>
+      <td>${orderHtml}</td>
+      <td class="col-wrap">${r.reason || '—'}</td>
+      <td>${resHtml}</td>
+      <td class="col-wrap">${r.notes || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderLogPagination() {
+  const totalPages = Math.max(Math.ceil(logTotalCount / LOG_PAGE_SIZE), 1);
+  const row = document.getElementById('paginationRow');
+  row.style.display = logTotalCount > LOG_PAGE_SIZE ? 'flex' : 'none';
+  document.getElementById('pageInfo').textContent = `صفحة ${logCurrentPage} من ${totalPages}`;
+  document.getElementById('btnPrevPage').disabled = logCurrentPage <= 1;
+  document.getElementById('btnNextPage').disabled = logCurrentPage >= totalPages;
+}
+function goLogPage(dir) {
+  const totalPages = Math.max(Math.ceil(logTotalCount / LOG_PAGE_SIZE), 1);
+  const next = logCurrentPage + dir;
+  if (next < 1 || next > totalPages) return;
+  logCurrentPage = next;
+  fetchLog();
+}
+
+// ─── §LOG-JS::export — بيكلم get_logs_export مش get_logs ───
+async function exportLogXLSX() {
+  const btn = document.getElementById('logExportBtn');
+  btn.disabled = true; btn.textContent = '⏳ جارٍ التصدير...';
+  try {
+    const data = await apiGet('get_logs_export', logQueryParams());
+    if (!data.ok) throw new Error(data.error || 'تعذّر التصدير');
+    const rows = (data.entries || []).map(buildLogRow).map(r => ({
+      'التاريخ':     r.iso ? formatDateForExport(r.iso) : null,
+      'الوقت':       r.iso ? formatTimeForExport(r.iso) : null,
+      'الموظف':      r.employee || null,
+      'نوع العملية': LOG_TYPE_LABELS[r.type] || r.type || null,
+      'الأوردر':     r.orderName || null,
+      'سبب الإلغاء': r.reason || null,
+      'النتيجة':     r.result ? ({ success:'تم', warning:'قيد التأكيد', error:'فشل' })[r.result] : null,
+      'ملاحظات':     r.notes || null,
+    }));
+    if (!rows.length) { showToast('مفيش نتائج للتصدير', 'error'); return; }
+
+    const wb = new ExcelJS.Workbook();
+    wb.views = [{ rightToLeft: true }];
+    const ws = wb.addWorksheet('سجل العمليات');
+    ws.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
+    ws.columns = [
+      { header:'التاريخ', key:'التاريخ', width:14 }, { header:'الوقت', key:'الوقت', width:12 },
+      { header:'الموظف', key:'الموظف', width:18 }, { header:'نوع العملية', key:'نوع العملية', width:18 },
+      { header:'الأوردر', key:'الأوردر', width:12 }, { header:'سبب الإلغاء', key:'سبب الإلغاء', width:30 },
+      { header:'النتيجة', key:'النتيجة', width:14 }, { header:'ملاحظات', key:'ملاحظات', width:46 },
+    ];
+    rows.forEach(r => ws.addRow(r));
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = `order-cancel-log-${new Date().toISOString().substring(0, 10)}.xlsx`;
+    a.click(); URL.revokeObjectURL(url);
+    showToast(`تم تصدير ${rows.length} عملية ✓`, 'success');
+  } catch (err) {
+    showToast('خطأ في التصدير: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '⬇ تصدير XLSX';
+  }
+}
+
+// قائمة الموظفين في فلتر السجل — من get_employees، ممنوع أي أسماء hardcoded
+function fillLogEmployeeFilter(employees) {
+  msState.emp.items = (employees || []).map(e => ({
+    value: e.username, label: (e.display_name || e.username || '').replace(/_/g, ' '),
+  }));
+  msRenderList('emp');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// §INIT
+// ══════════════════════════════════════════════════════════════
 renderVersionUI();
 updateSettingsBtn();
 checkWorkerVersion();
 updateLoginSettingsBtn();
+buildTabChipMenu();
+updateTabChip();
+msRenderList('emp');
+msRenderList('type');
+renderChips();
+updateFilterIconState();
 loadEmployeesList();
+
 </script>
 </body>
 </html>

@@ -1,8 +1,20 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.4.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.5.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v1.1.0 · html-builder v3.0.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.5.0:
+//   🟡 [جديد] get_logs_count و get_logs_export — التلاتة اللي معيار الـ Log Tab
+//       بيفرضهم بقوا موجودين. get_logs اتحدّث للنسخة القياسية: استبعاد
+//       login/logout في SQL (كان مش موجود خالص) وسقف 100 صف للصفحة بدل 500.
+//   🟡 [جديد] فلاتر السجل بقت بتاخد قوايم: employees / types + dateFrom/dateTo —
+//       امتداد مقصود على النسخة القياسية عشان الفلاتر multi-select اللي
+//       data-table-standard بيفرضها. من غير الامتداد ده الفلترة كانت هتبقى
+//       client-side على الصفحة الحالية، وعدّاد "النتائج" والترقيم يكدبوا.
+//   ⚪ [جديد] extra.result في صفوف D1 ("success" | "warning" | "error") — عمود
+//       "النتيجة" في تاب السجل بيقراه (html-builder Step 3C). الصفوف الأقدم
+//       من النسخة دي مالهاش الحقل، والواجهة بتعرضها "—" مش "✓".
 //
 // CHANGELOG v2.4.0:
 //   🔴 [إصلاح] "لسه قيد التأكيد" كانت بتظهر على إلغاء ناجح ١٠٠% تقريبًا في كل
@@ -95,7 +107,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.4.0";
+const WORKER_VERSION = "2.5.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -232,19 +244,66 @@ async function writeLog(db, entry) {
   ).run();
 }
 
-async function getLogs(db, { tool = null, employee = null, type = null, search = null, limit = 200, offset = 0 } = {}) {
-  let sql = "SELECT * FROM logs WHERE 1=1";
+/**
+ * Fetch logs from D1 with server-side filtering + pagination.
+ * login/logout excluded server-side via SQL — NOT client-side. Max 100/page.
+ * ⚠️ Do NOT use for XLSX export — use getLogsExport().
+ *
+ * ⚠️ امتداد مقصود على النسخة القياسية في ecommoda-worker-builder →
+ * references/shared-functions.md: الباراميترز `employees` (قايمة) و`types`
+ * (قايمة) و`dateFrom`/`dateTo` **إضافية واختيارية**، والسلوك من غيرها مطابق
+ * حرفيًا للنسخة القياسية. السبب: معيار data-table-standard بيفرض إن كل فلاتر
+ * أي جدول تبقى multi-select، والنسخة القياسية بتاخد `employee` واحد بس —
+ * فالفلترة كانت هتضطر تبقى client-side على الصفحة الحالية، وده بيخلي عدّاد
+ * "النتائج" وترقيم الصفحات يكدبوا. الامتداد ده مرشّح يترفع للمهارة نفسها.
+ */
+function buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo }) {
+  let sql = "SELECT_PLACEHOLDER FROM logs WHERE type NOT IN ('login','logout')";
   const b = [];
   if (tool) { sql += " AND tool = ?"; b.push(tool); }
-  if (employee) { sql += " AND employee = ?"; b.push(employee); }
-  if (type) { sql += " AND type = ?"; b.push(type); }
-  if (search) {
-    sql += " AND (sku LIKE ? OR product_title LIKE ? OR order_name LIKE ? OR notes LIKE ?)";
-    b.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+  if (Array.isArray(employees) && employees.length) {
+    sql += ` AND employee IN (${employees.map(() => "?").join(",")})`;
+    b.push(...employees);
   }
-  sql += " ORDER BY timestamp DESC LIMIT ? OFFSET ?";
-  b.push(Math.min(Number(limit) || 200, 500), Number(offset) || 0);
-  return (await db.prepare(sql).bind(...b).all()).results;
+  if (Array.isArray(types) && types.length) {
+    sql += ` AND type IN (${types.map(() => "?").join(",")})`;
+    b.push(...types);
+  }
+  if (search) {
+    sql += " AND (order_name LIKE ? OR notes LIKE ?)";
+    b.push(`%${search}%`, `%${search}%`);
+  }
+  // التاريخ نص ISO في العمود — المقارنة بأول 10 حروف (YYYY-MM-DD).
+  // ⚠️ الحدود بتوقيت UTC زي ما هي مخزّنة، والعرض بتوقيت القاهرة (UTC+3) —
+  // فرق ٣ ساعات ممكن يخلي عملية بعد ٩ مساءً بتوقيت القاهرة تقع في يوم UTC
+  // اللي بعده. مقبول لفلتر بالأيام، ومكتوب هنا عشان مايتكتشفش كباج بعدين.
+  if (dateFrom) { sql += " AND substr(timestamp, 1, 10) >= ?"; b.push(dateFrom); }
+  if (dateTo)   { sql += " AND substr(timestamp, 1, 10) <= ?"; b.push(dateTo); }
+  return { sql, b };
+}
+
+async function getLogs(db, { tool = null, employees = null, types = null, search = null,
+                             dateFrom = null, dateTo = null, limit = 100, offset = 0 } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+  const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + " ORDER BY timestamp DESC LIMIT ? OFFSET ?";
+  b.push(Math.min(Number(limit) || 100, 100), Math.max(Number(offset) || 0, 0));
+  return (await db.prepare(q).bind(...b).all()).results;
+}
+
+/** عدد الصفوف المطابقة للفلتر — للترقيم. نفس الفلاتر بالظبط، من غير data. */
+async function getLogsCount(db, { tool = null, employees = null, types = null, search = null,
+                                  dateFrom = null, dateTo = null } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+  const row = await db.prepare(sql.replace("SELECT_PLACEHOLDER", "SELECT COUNT(*) as total")).bind(...b).first();
+  return row?.total ?? 0;
+}
+
+/** كل الصفوف المطابقة للتصدير — لحد 2000 صف. ممنوع استخدام getLogs للتصدير. */
+async function getLogsExport(db, { tool = null, employees = null, types = null, search = null,
+                                   dateFrom = null, dateTo = null } = {}) {
+  const { sql, b } = buildLogFilterSQL({ tool, employees, types, search, dateFrom, dateTo });
+  const q = sql.replace("SELECT_PLACEHOLDER", "SELECT *") + " ORDER BY timestamp DESC LIMIT 2000";
+  return (await db.prepare(q).bind(...b).all()).results;
 }
 
 // ══════════════════════════════════════════════════════
@@ -722,6 +781,7 @@ async function handleCancelOrder(request, env) {
         warehouseNotified: !!warehouseNotified,
         fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
         job, metafield, confirmed,
+        result: confirmed ? "success" : "warning",   // Step 3C — عمود النتيجة في تاب السجل
         verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
       },
     });
@@ -746,6 +806,7 @@ async function handleCancelOrder(request, env) {
         reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
         warehouseNotified: !!warehouseNotified,
         fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
+        result: "error",   // Step 3C
         error: err.message,
       },
     }).catch(() => {});
@@ -753,17 +814,39 @@ async function handleCancelOrder(request, env) {
   }
 }
 
+// ─── §LOG-ENDPOINTS::logParams ───
+function logParamsFrom(url) {
+  const list = k => (url.searchParams.get(k) || "").split(",").map(v => v.trim()).filter(Boolean);
+  return {
+    tool: TOOL_NAME,
+    employees: list("employees"),
+    types: list("types"),
+    search: url.searchParams.get("search") || null,
+    dateFrom: url.searchParams.get("dateFrom") || null,
+    dateTo: url.searchParams.get("dateTo") || null,
+  };
+}
+
 async function handleGetLogs(request, env) {
   const url = new URL(request.url);
-  const logs = await getLogs(env.DB, {
-    tool: TOOL_NAME,
-    employee: url.searchParams.get("employee") || null,
-    type: url.searchParams.get("type") || null,
-    search: url.searchParams.get("search") || null,
+  const entries = await getLogs(env.DB, {
+    ...logParamsFrom(url),
     limit: Number(url.searchParams.get("limit") || 100),
     offset: Number(url.searchParams.get("offset") || 0),
   });
-  return json({ ok: true, logs }, 200, request);
+  return json({ ok: true, entries }, 200, request);
+}
+
+async function handleGetLogsCount(request, env) {
+  const url = new URL(request.url);
+  const total = await getLogsCount(env.DB, logParamsFrom(url));
+  return json({ ok: true, total }, 200, request);
+}
+
+async function handleGetLogsExport(request, env) {
+  const url = new URL(request.url);
+  const entries = await getLogsExport(env.DB, logParamsFrom(url));
+  return json({ ok: true, entries }, 200, request);
 }
 
 async function handleDiag(request, env) {
@@ -870,6 +953,8 @@ export default {
 
       // ─── §LOG-ENDPOINTS ───────────────────────────────────
       if (action === "get_logs") return await handleGetLogs(request, env);
+      if (action === "get_logs_count") return await handleGetLogsCount(request, env);
+      if (action === "get_logs_export") return await handleGetLogsExport(request, env);
       // ──────────────────────────────────────────────────────
 
       return json({ ok: false, error: "Not found" }, 404, request);
