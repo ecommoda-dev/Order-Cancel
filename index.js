@@ -1,8 +1,18 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.1.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.1.1  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v1.1.0 · html-builder v2.2.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.1.1:
+//   🟡 [تغيير] REASON_ENUM_MAP اتراجع واتأكد من أحمد (01-09-2026) — بقى
+//       تصنيف مُقرّ مش تخمين. الأسماء الـ14 اتقارنت بالقائمة الحية على
+//       شوبيفاي وطابقت حرفيًا (نفس النص ونفس الترتيب، صفر اختلاف).
+//       التعديلات: "لا يوجد سبب" OTHER→CUSTOMER · "رقم غير صحيح"
+//       STAFF→CUSTOMER · "المنتج غير أصلي" OTHER→CUSTOMER · "أوردر مكرر
+//       وتم دمجه" STAFF→OTHER. مفيش STAFF ولا DECLINED مستخدمين خالص —
+//       DECLINED معناها في شوبيفاي "الدفع اترفض" وده مستحيل هنا لأن
+//       الأداة بتشتغل على PENDING (COD ملهاش تحصيل).
 //
 // CHANGELOG v2.1.0 (أول نشر من git):
 //   🔴 [إصلاح] endpoint `get_employees` كان **ناقص تمامًا** — الواجهة بتناديه
@@ -41,7 +51,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.1.0";
+const WORKER_VERSION = "2.1.1";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -55,15 +65,15 @@ const ALLOWED_FINANCIAL_STATUS = new Set(["PENDING"]);
 // enum شوبيفاي الرسمي (OrderCancelReason). راجعه مع أحمد قبل الاعتماد النهائي.
 const REASON_ENUM_MAP = {
   "لا يرد نهائي على المندوب": "CUSTOMER",
-  "لا يوجد سبب": "OTHER",
+  "لا يوجد سبب": "CUSTOMER",
   "لم يتم الرد للتأكيد": "CUSTOMER",
-  "رقم غير صحيح": "STAFF",
-  "المنتج غير أصلي": "OTHER",
+  "رقم غير صحيح": "CUSTOMER",
+  "المنتج غير أصلي": "CUSTOMER",
   "تأجيل غير محدد": "CUSTOMER",
   "السعر غالي": "CUSTOMER",
   "طلب الأوردر بالخطأ": "CUSTOMER",
   "استلام جزئي - بوسطة": "OTHER",
-  "أوردر مكرر وتم دمجه": "STAFF",
+  "أوردر مكرر وتم دمجه": "OTHER",
   "المقاس غير متوفر": "INVENTORY",
   "العميل سافر": "CUSTOMER",
   "عطلان": "INVENTORY",
