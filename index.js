@@ -1,8 +1,30 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.5.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.6.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v1.1.0 · html-builder v3.0.0 · constants v1.4.1 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.1.0 — 01-09-2026
+//
+// CHANGELOG v2.6.0:
+//   🟡 [جديد] الأداة بقت بتكتب حالة الأوردر S1 (custom.manual_status) =
+//       "Cancelled" مع كل إلغاء — أكشن جديد بطلب أحمد 01-09-2026.
+//       النوع متأكَّد من التعريف الحي (single_line_text_field) و"Cancelled"
+//       موجودة حرفيًا في الـ choices. الانتقال بيتفحص الأول
+//       (order-lifecycle قاعدة 10) وبيترفض ويتسجّل لو غير شرعي — مايتكتبش
+//       في السكوت. الميوتيشن بتعدّي التلات فحوصات (Step 5A ②).
+//       ⚠️ بتتكتب **بعد التأكيد بس**: لو الإلغاء لسه مش مؤكَّد ما بنكتبش
+//       الحالة — "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً. (الـ Flow
+//       الحالي بيكتبها كمان بعد ~15 ثانية، فالحالة مش هتضيع.)
+//   🟡 [جديد] صف D1 تاني مع كل تغيير حالة: tool = 'metafields_change' /
+//       type = 'update' بالقيمة قبل وبعد (order-lifecycle قاعدة 9). السجل ده
+//       هو المصدر الوحيد لأي KPI عن زمن الدورة أو عدد المحاولات.
+//   🔴 [إصلاح] فشل الكتابة في D1 كان بيتحوّل لـ "فشل الإلغاء" (500) والأوردر
+//       اتلغى فعلاً — كذب على فعل لا رجعة فيه. دلوقتي في try/catch محلي
+//       وبيرجّع logged:false + logError زي ما Step 5A ⑦ بيفرض.
+//   🟡 [جديد] actions[] بتتملي أول بأول وبترجع في الرد وفي extra — الواجهة
+//       بتعرض "ما تم فعليًا" منها (html-builder Step 3C). وبترجع كمان في حالة
+//       الفشل، عشان يبان اللي تم قبل ما يقع.
+//   ⚪ [جديد] الرد بيشيل status ("success" | "warning" | "error") صراحةً بدل
+//       ما الواجهة تشتقه.
 //
 // CHANGELOG v2.5.0:
 //   🟡 [جديد] get_logs_count و get_logs_export — التلاتة اللي معيار الـ Log Tab
@@ -107,7 +129,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.5.0";
+const WORKER_VERSION = "2.6.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -160,6 +182,22 @@ const FULFILLMENT_STATUS_AR = {
 // السبب التجاري الحقيقي بيتكتب كامل بالعربي في custom.cancel_manual_reason
 // وفي سجل D1، وهما مصدر أي تحليل لأسباب الإلغاء — مش تقارير شوبيفاي.
 const SHOPIFY_CANCEL_REASON = "OTHER";
+
+// ── حالة الأوردر S1 (custom.manual_status) ──
+// النوع متأكَّد من التعريف الحي على شوبيفاي 01-09-2026: single_line_text_field،
+// و"Cancelled" موجودة حرفيًا في قائمة الـ choices. metafieldsSet بترفض الكتابة
+// كلها لو الـ type مش مطابق بالحرف.
+const S1_METAFIELD = { namespace: "custom", key: "manual_status", type: "single_line_text_field" };
+const S1_CANCELLED = "Cancelled";
+
+// ecommoda-order-lifecycle قاعدة 10: أي Worker بيكتب manual_status لازم يتحقق
+// من شرعية الانتقال الأول ويرفض ويسجّل القفزات غير الشرعية — مايكتبش في السكوت.
+// المصدر: references/state-machines.md §جدول الانتقالات (الحالات اللي منها
+// الانتقال لـ Cancelled شرعي).
+const CAN_TRANSITION_TO_CANCELLED = new Set([
+  "New Order", "WhatsApp-Confirmed", "WhatsApp-CANCELLED",
+  "Confirmed", "Confirmed + Edit", "Pending Edit", "Ready",
+]);
 
 // ══════════════════════════════════════════════════════
 // §CORS
@@ -574,6 +612,49 @@ async function cancelOrderInShopify(env, token, { orderId, notifyCustomer, resto
   return payload.job;
 }
 
+// ─── §CANCEL::writeManualStatusCancelled ───
+// بتكتب custom.manual_status = "Cancelled" بعد ما الإلغاء يتأكد.
+// بتتحقق من شرعية الانتقال الأول (قاعدة 10)، وبتعدّي التلات فحوصات بتاعة أي
+// ميوتيشن (worker-builder Step 5A ②): خطأ علوي → userErrors → تأكيد الـ payload.
+async function writeManualStatusCancelled(env, token, orderId, statusBefore) {
+  if (statusBefore === S1_CANCELLED) {
+    return { skipped: true, reason: "الحالة كانت Cancelled بالفعل", statusBefore };
+  }
+  if (!CAN_TRANSITION_TO_CANCELLED.has(statusBefore)) {
+    // مايتكتبش في السكوت — يترفض ويترجع بسبب واضح يتسجّل في D1
+    return { skipped: true, reason: `انتقال غير شرعي: "${statusBefore || "فارغ"}" → "${S1_CANCELLED}"`, statusBefore };
+  }
+
+  const mutation = `mutation SetManualStatus($metafields: [MetafieldsSetInput!]!) {
+    metafieldsSet(metafields: $metafields) {
+      metafields { id namespace key value type updatedAt }
+      userErrors { field message code }
+    }
+  }`;
+  const variables = {
+    metafields: [{
+      ownerId: orderId,
+      namespace: S1_METAFIELD.namespace,
+      key: S1_METAFIELD.key,
+      type: S1_METAFIELD.type,
+      value: S1_CANCELLED,
+    }],
+  };
+
+  const data = await shopifyGQL(env, token, mutation, variables, "setManualStatus");
+  const payload = data?.data?.metafieldsSet;
+  const errs = payload?.userErrors || [];
+  if (errs.length) {
+    throw new Error("setManualStatus: " + errs.map(e => `${e.code ? e.code + ": " : ""}${e.message}`).join(" | "));
+  }
+  const written = payload?.metafields?.[0];
+  // الفحص التالت — userErrors فاضية معناها "مفيش اعتراض" مش "اتنفّذت"
+  if (!written?.id || written.value !== S1_CANCELLED) {
+    throw new Error("setManualStatus: شوبيفاي ما أكّدتش كتابة الحالة");
+  }
+  return { skipped: false, statusBefore, statusAfter: S1_CANCELLED, metafield: written };
+}
+
 // ─── §CANCEL::waitForCancelConfirmation ───
 // orderCancel ميوتيشن **غير متزامنة**: شوبيفاي بترجّع Job وبتنفّذ الإلغاء بعدين.
 // النسخة القديمة كانت بتقرا الأوردر تاني **فورًا** (بعد أجزاء من الثانية) —
@@ -761,38 +842,90 @@ async function handleCancelOrder(request, env) {
   const shopifyReason = SHOPIFY_CANCEL_REASON;
   const staffNote = `Cancelled from EcomModa Order Cancel Tool by ${employee}. Manual reason: ${reasonLabel}`.slice(0, 255);
 
-  let job = null, metafield = null, confirmed = false, verify = null;
+  let job = null, metafield = null, confirmed = false, verify = null, s1 = null;
+  // ⚠️ المصفوفة دي بتتملي **أول بأول** مش في الآخر (worker-builder Step 5A ⑤):
+  // مسار الإلغاء لا رجعة فيه، فأوردر اتلغى وفشلت كتابة حالته لازم يبان في
+  // السجل إنه اتلغى فعلاً — مش "ما حصلش حاجة".
+  const actions = [];
 
   try {
     job = await cancelOrderInShopify(env, token, { orderId, notifyCustomer, restock, shopifyReason, staffNote });
+    actions.push(restock ? "إلغاء الأوردر على شوبيفاي + استرجاع المخزون" : "إلغاء الأوردر على شوبيفاي");
+
     metafield = await writeCancelReasonMetafield(env, token, orderId, reasonLabel);
+    actions.push(`كتابة سبب الإلغاء: ${reasonLabel}`);
 
     // تحقق فعلي بعد التنفيذ — بانتظار الـ Job، مش قراءة فورية
     verify = await waitForCancelConfirmation(env, token, orderId, job?.id);
     confirmed = verify.confirmed;
+    if (confirmed) actions.push("تأكيد الإلغاء من شوبيفاي (cancelledAt)");
 
-    await writeLog(env.DB, {
-      tool: TOOL_NAME, type: "cancel", employee,
-      orderId: orderBefore.numericId, orderName: orderBefore.name,
-      notes: `تم إلغاء الأوردر — السبب: ${reasonLabel}${confirmed ? "" : " (لسه مش مؤكَّد من شوبيفاي)"}`,
-      extra: {
-        orderGid: orderId, manualStatusBefore: orderBefore.manualStatus,
-        reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
-        warehouseNotified: !!warehouseNotified,
-        fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
-        job, metafield, confirmed,
-        result: confirmed ? "success" : "warning",   // Step 3C — عمود النتيجة في تاب السجل
-        verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
-      },
-    });
+    // ── حالة الأوردر S1 → Cancelled ──
+    // بتتكتب **بعد التأكيد بس**: "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً،
+    // ولو كتبناها على إلغاء لسه مش مؤكَّد ممكن نوسم أوردر لسه حي.
+    if (confirmed) {
+      try {
+        s1 = await writeManualStatusCancelled(env, token, orderId, orderBefore.manualStatus);
+        actions.push(s1.skipped
+          ? `حالة الأوردر S1 ما اتغيّرتش — ${s1.reason}`
+          : `تحديث حالة الأوردر S1: "${s1.statusBefore || "فارغ"}" → "${S1_CANCELLED}"`);
+      } catch (e) {
+        // فشل كتابة الحالة **مايلغيش** إن الأوردر اتلغى فعلاً — يتسجّل ويتعرض
+        s1 = { failed: true, error: e.message, statusBefore: orderBefore.manualStatus };
+        actions.push(`⚠️ فشل تحديث حالة الأوردر S1 — ${e.message}`);
+      }
+    } else {
+      s1 = { skipped: true, reason: "الإلغاء لسه مش مؤكَّد من شوبيفاي", statusBefore: orderBefore.manualStatus };
+      actions.push("حالة الأوردر S1 ما اتغيّرتش — الإلغاء لسه مش مؤكَّد");
+    }
+
+    const status = confirmed ? (s1?.failed ? "warning" : "success") : "warning";
+
+    // ⚠️ فشل D1 مايتحوّلش لفشل العملية (Step 5A ⑦) — الأوردر اتلغى فعلاً،
+    // فبنرجّع logged:false عشان الواجهة تحذّر بدل ما نقول "فشل الإلغاء" كذبًا.
+    let logged = true, logError = null;
+    try {
+      await writeLog(env.DB, {
+        tool: TOOL_NAME, type: "cancel", employee,
+        orderId: orderBefore.numericId, orderName: orderBefore.name,
+        notes: `تم إلغاء الأوردر — السبب: ${reasonLabel}${confirmed ? "" : " (لسه مش مؤكَّد من شوبيفاي)"}`,
+        extra: {
+          orderGid: orderId, manualStatusBefore: orderBefore.manualStatus,
+          reasonLabel, shopifyReason, restock: !!restock, notifyCustomer: !!notifyCustomer,
+          warehouseNotified: !!warehouseNotified,
+          fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
+          job, metafield, confirmed, s1, actions,
+          result: status,   // Step 3C — عمود النتيجة في تاب السجل
+          verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
+        },
+      });
+
+      // ecommoda-order-lifecycle قاعدة 9 + Step 5B قاعدة 3: كل تغيير حالة
+      // يتسجّل تحت tool = 'metafields_change' / type = 'update' بالقيمة قبل وبعد.
+      // السجل ده هو **المصدر الوحيد** لأي KPI عن زمن الدورة أو عدد المحاولات —
+      // كتابة ناقصة = فجوة دائمة في الأرقام دي.
+      if (s1 && !s1.skipped && !s1.failed) {
+        await writeLog(env.DB, {
+          tool: "metafields_change", type: "update", employee,
+          orderId: orderBefore.numericId, orderName: orderBefore.name,
+          valueBefore: s1.statusBefore || null, valueAfter: S1_CANCELLED,
+          notes: `custom.manual_status: "${s1.statusBefore || "فارغ"}" → "${S1_CANCELLED}" (من أداة إلغاء الأوردرات)`,
+          extra: { orderGid: orderId, source: TOOL_NAME, reasonLabel, metafield: s1.metafield },
+        });
+      }
+    } catch (e) {
+      logged = false; logError = e.message;
+    }
 
     return json({
       ok: true,
+      status,
+      confirmed, logged, logError, actions,
       message: confirmed
         ? `تم إلغاء الأوردر ${orderBefore.name} وتأكيده`
         : `تم إرسال طلب إلغاء الأوردر ${orderBefore.name} — شوبيفاي ما أكّدتش الإلغاء خلال ` +
           `${Math.round((verify?.waitedMs || 0) / 1000)} ثوانٍ. الإلغاء غالبًا هيكمل لوحده — اضغط "تحقق الآن"`,
-      confirmed, order: orderBefore, job, metafield,
+      order: orderBefore, job, metafield, s1,
       verify: verify && { jobDone: verify.jobDone, attempts: verify.attempts, waitedMs: verify.waitedMs },
     }, 200, request);
 
@@ -807,10 +940,11 @@ async function handleCancelOrder(request, env) {
         warehouseNotified: !!warehouseNotified,
         fulfillmentStatusBefore: orderBefore.displayFulfillmentStatus,
         result: "error",   // Step 3C
+        actions,           // اللي تم فعلاً قبل الفشل — مش قايمة فاضية
         error: err.message,
       },
     }).catch(() => {});
-    return json({ ok: false, error: err.message }, 500, request);
+    return json({ ok: false, status: "error", actions, error: err.message }, 500, request);
   }
 }
 

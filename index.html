@@ -259,6 +259,10 @@ body {
 .result-title.success { color: #15803d; }
 .result-title.warning { color: var(--amber); }
 .result-title.error   { color: var(--red); }
+.actions-done { margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; }
+.actions-done-ttl { font-size: 11.5px; font-weight: 800; color: var(--text-secondary); margin-bottom: 4px; }
+.actions-done ul { padding-inline-start: 18px; font-size: 12.5px; line-height: 1.9; color: var(--text-primary); }
+.log-warn { margin-top: 4px; font-size: 12.5px; font-weight: 700; color: var(--amber); background: var(--amber-light); border: 1px solid #fcd34d; border-radius: var(--radius-sm); padding: 7px 12px; }
 
 /* ── Confirm Dialog ─────────────────────────────────────────── */
 .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 600; display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -758,6 +762,9 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الأداة بقت بتحدّث حالة الأوردر S1 إلى <code>Cancelled</code></b> مع كل إلغاء مؤكَّد — أكشن جديد. الانتقال بيتفحص الأول، والتغيير بيتسجّل في D1 بالقيمة قبل وبعد</span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span>سطر <b>"ما تم فعليًا"</b> تحت نتيجة الإلغاء — بيعدّد اللي حصل فعلاً خطوة خطوة (الإلغاء + الاسترجاع · السبب · التأكيد · تحديث S1)، وبيظهر حتى لو العملية فشلت في النص</span></li>
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span>لو الكتابة في السجل فشلت، الأداة كانت بتقول <b>"فشل الإلغاء"</b> والأوردر يكون اتلغى فعلاً. دلوقتي بتقول "تمت لكن ما اتسجلتش"</span></li>
             <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>زرار "نسخة الـ Worker مختلفة" كان تحذير كاذب دايم</b> — كان بيقارن رقم الواجهة برقم الـ Worker تطابقًا حرفيًا، والرقمين مستقلين بالتصميم واختلافهم وضع طبيعي. بقى <b>"⚠️ الـ Worker نسخة قديمة"</b>: بيولّع بس لو الـ Worker أقدم من الحد الأدنى اللي الواجهة محتاجاه (2.5.0) — يعني rollback أو Promote ناقص</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>تاب سجل العمليات</b> — جدول بمعيار EcomModa الموحّد: فلاتر multi-select (الموظف · نوع العملية) + فلتر فترة + بحث + ترتيب على الأعمدة + ترقيم صفحات (100/صفحة) + تصدير XLSX لكل النتائج المطابقة للفلاتر</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>شريط تابات رئيسي + تثبيت الهيدر عند السكرول (الشريط بيتقفل وبيظهر بدله chip باسم التاب الحالي)</span></li>
@@ -834,6 +841,8 @@ body {
               <li>لو مؤهل، الموظف يختار سبب الإلغاء من القائمة (بتتقرأ لايف من ميتافيلد شوبيفاي)</li>
               <li>ضغط "إلغاء الأوردر" بيفتح نافذة تأكيد نهائية — وفيها إقرار إبلاغ الشحن/المخزن لو الأوردر Confirmed أو Ready</li>
               <li>بعد التأكيد: الأداة بتلغي الأوردر على شوبيفاي (restock + السبب مسجّل)، وبتستنى الـ Job وتتحقق فعليًا إن <code>cancelledAt</code> اتسجّل قبل ما تقول "تم"</li>
+              <li>بعد ما الإلغاء يتأكد: بتحدّث <b>حالة الأوردر S1</b> (<code>custom.manual_status</code>) إلى <code>Cancelled</code></li>
+              <li>النتيجة بتعرض سطر <b>"ما تم فعليًا"</b> — كل خطوة حصلت فعلاً، مش وصف عام</li>
               <li>كل عملية (ناجحة أو فاشلة) بتتسجّل في D1، وبتظهر في <b>تاب سجل العمليات</b></li>
             </ol>
 
@@ -841,11 +850,22 @@ body {
             <p>جدول بمعيار <code>data-table-standard</code>: أعمدة التاريخ · الوقت · الموظف · نوع العملية · الأوردر (لينك لشوبيفاي) · سبب الإلغاء · النتيجة · ملاحظات. الفلاتر كلها <b>اختيار متعدد</b> (الموظف · نوع العملية) + فترة + بحث، والترتيب على الأعمدة مستقل تمامًا عن الفلاتر (3 حالات: تصاعدي → تنازلي → بلا ترتيب).</p>
             <p><b>الفلترة كلها server-side</b> — يعني عدّاد "النتائج" وترقيم الصفحات بيوصفوا <b>كل</b> الصفوف المطابقة في D1، مش الصفحة المعروضة بس. التصدير كمان بينزّل كل المطابق (لحد 2000 صف)، مش الصفحة الحالية. <code>login</code> و<code>logout</code> مستبعدين في الـ SQL نفسه.</p>
 
+            <h4>⚙️ إجراءات الإلغاء — الترتيب والشروط</h4>
+            <table>
+              <tr><th>الإجراء</th><th>الشرط</th></tr>
+              <tr><td>إلغاء الأوردر على شوبيفاي + <code>restock</code></td><td>الشروط الخمسة كلها متحققة + الإقرار (لو Confirmed/Ready)</td></tr>
+              <tr><td>كتابة <code>custom.cancel_manual_reason</code></td><td>بعد قبول ميوتيشن الإلغاء مباشرةً</td></tr>
+              <tr><td>انتظار الـ Job + تأكيد <code>cancelledAt</code></td><td>backoff متصاعد لحد ≈٦ ثوانٍ</td></tr>
+              <tr><td>تحديث <code>custom.manual_status</code> = <code>Cancelled</code></td><td><b>بعد التأكيد بس</b>، والانتقال لازم يكون شرعي (<code>New Order</code>/<code>Confirmed</code>/<code>Ready</code>… → <code>Cancelled</code>)</td></tr>
+              <tr><td>صف D1: <code>order_cancel</code> / <code>cancel</code></td><td>دايمًا (ناجح أو فاشل — الفاشل بـ <code>cancel_failed</code>)</td></tr>
+              <tr><td>صف D1: <code>metafields_change</code> / <code>update</code></td><td>بس لو حالة S1 اتغيّرت فعلاً — بالقيمة قبل وبعد</td></tr>
+            </table>
+
             <h4>الـ Endpoints الرئيسية</h4>
             <table>
               <tr><th>action</th><th>الوصف</th></tr>
               <tr><td><code>lookup_order</code></td><td>البحث عن أوردر برقمه / الـ Order ID / رابطه + جلب قائمة أسباب الإلغاء الحية. الرقم المجرّد بيتجرّب كـ ID الأول لو ≥ 10 خانات، وكاسم أوردر لو أقصر — والتانية fallback</td></tr>
-              <tr><td><code>cancel_order</code></td><td>تنفيذ الإلغاء + restock + تسجيل السبب + تحقق بعدي</td></tr>
+              <tr><td><code>cancel_order</code></td><td>تنفيذ الإلغاء + restock + تسجيل السبب + انتظار الـ Job والتحقق + تحديث حالة S1</td></tr>
               <tr><td><code>diag</code></td><td>فحص صلاحيات شوبيفاي (write_orders / read_returns / write_returns)</td></tr>
               <tr><td><code>get_config</code></td><td>مقارنة نسخة الـ Worker مع الواجهة</td></tr>
               <tr><td><code>get_employees</code></td><td>قائمة الموظفين النشطين — بتملا قائمة شاشة الدخول <b>وفلتر الموظف في تاب السجل</b> (نفس المصدر، مفيش قائمة تانية)</td></tr>
@@ -892,6 +912,8 @@ body {
               <li><b>حارس نسخة الـ Worker حد أدنى مش تطابق.</b> <code>cmpVersion()</code> مقارنة رقمية (مش نصية — <code>"10"</code> أصغر من <code>"9"</code> كنص)، والتحذير يولّع بس لو الـ Worker <b>أقدم</b> من <code>MIN_WORKER_VERSION</code>. النمط القديم (تطابق حرفي) كان تحذير كاذب دايم، والموظف بيتعوّد يتجاهله فالحالة الحقيقية بتعدّي بلا إشارة</li>
               <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code>) — امتداد مقصود على النسخة القياسية لدوال السجل، عشان الفلاتر multi-select. من غيره كانت الفلترة هتبقى على الصفحة المحمّلة بس وعدّاد النتائج يكدب</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
+              <li><b>حالة S1 بتتكتب بعد التأكيد بس.</b> لو الإلغاء رجع أصفر (مش مؤكَّد)، الحالة ما بتتكتبش — "S1 = Cancelled" لازم توصف إلغاء حصل فعلاً. فيه Flow على شوبيفاي بيكتبها كمان بعد ~15 ثانية، فالحالة مش بتضيع</li>
+              <li>فشل تحديث S1 <b>مايلغيش</b> إن الأوردر اتلغى — النتيجة بتبقى ⚠ أصفر وسطر "ما تم فعليًا" بيقول إيه اللي تم وإيه اللي فشل</li>
               <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها إن الـ Worker استنى الـ Job بتاع <code>orderCancel</code> لمدة ≈٦ ثوانٍ (backoff متصاعد 400→2200ms) و<code>cancelledAt</code> لسه ما اتسجّلش. دي <b>"ما قدرناش نتأكد"</b> — مش "تم" ومش "فشل". الـ Job بيكمل لوحده في الغالب، فالبانر فيه زرار <code>recheckCancelStatus()</code> بيعيد القراءة ويحوّله لأخضر لو اتأكد. لو فضلت صفرا بعد كذا محاولة، افتح الأوردر في شوبيفاي</li>
               <li>سطر الدولة (Egypt) متشال من عنوان الشحن عمدًا — كل الأوردرات محلية والسطر ما بيضيفش معلومة. لو اتفتح بيع دولي، السطر لازم يرجع</li>
               <li>الـ chips مبنية على 4 مصادر مختلفة: ميتافيلد <code>custom.manual_status</code> (S1) · <code>displayFinancialStatus</code> · <code>displayFulfillmentStatus</code> · مصفوفة <code>returns</code> — التلاتة الأخيرة من شوبيفاي مباشرة</li>
@@ -989,13 +1011,13 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.4.0';
+const TOOL_VERSION = 'v1.5.0';
 
 // أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
 // get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
 // ⚠️ صيانة: أي endpoint جديد الصفحة تعتمد عليه → ارفع الرقم ده في نفس التسليم.
 // ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
-const MIN_WORKER_VERSION = '2.5.0';
+const MIN_WORKER_VERSION = '2.6.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -1652,15 +1674,30 @@ async function executeCancelOrder(reasonLabel, warehouseNotified = false) {
       employee: currentEmployee.username,
     });
 
-    // ⭐ ٣ حالات مش اتنين — success | warning | error (Step 3C)
-    const status = !res.ok ? 'error' : (res.confirmed ? 'success' : 'warning');
+    // ⭐ ٣ حالات مش اتنين — الحالة جاية من السيرفر كما هي، مش مشتقّة (Step 3C)
+    const status = res.status || (!res.ok ? 'error' : (res.confirmed ? 'success' : 'warning'));
     const titleMap = { success: '✓ تم إلغاء الأوردر وتأكيده', warning: '⚠ تم إرسال الإلغاء — لسه قيد التأكيد', error: '✗ فشل الإلغاء' };
+
+    // "ما تم فعليًا" — بتتبني من res.actions، وبتظهر حتى في حالة الفشل عشان
+    // يبان اللي تم قبل ما يقع (مسار الإلغاء لا رجعة فيه)
+    const actions = res.actions || [];
+    const actionsHtml = actions.length ? `
+      <div class="actions-done">
+        <div class="actions-done-ttl">ما تم فعليًا:</div>
+        <ul>${actions.map(a => `<li>${a}</li>`).join('')}</ul>
+      </div>` : '';
+
+    // العملية تمت لكن ما اتسجلتش في السجل — تنبيه صريح مش صمت
+    const logWarn = (res.ok && res.logged === false) ? `
+      <div class="log-warn">⚠️ العملية تمت لكن <b>ما اتسجلتش في السجل</b>${res.logError ? ` — ${res.logError}` : ''}</div>` : '';
 
     resultArea.innerHTML = `
       <div class="result-banner ${status}" id="resultBanner">
         <div class="result-title ${status}">${titleMap[status]}</div>
         <div>${res.ok ? res.message : res.error}</div>
         ${res.ok ? `<div style="font-size:12px;color:var(--text-muted);">السبب المسجّل: ${reasonLabel}</div>` : ''}
+        ${actionsHtml}
+        ${logWarn}
         ${status === 'warning' ? `
           <div style="margin-top:6px;">
             <button class="btn btn-outline" id="recheckBtn" style="padding:6px 14px;font-size:12px;"
