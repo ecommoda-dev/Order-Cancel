@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<!-- skills: html-builder v3.0.0 · worker-builder v1.1.0 · constants v1.4.1 · order-lifecycle v1.1.0 — 01-09-2026 -->
+<!-- skills: html-builder v4.0.0 · worker-builder v1.1.0 · constants v1.4.2 · order-lifecycle v1.1.0 — 01-09-2026 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إلغاء الأوردرات يدويًا — EcomModa</title>
@@ -514,7 +514,7 @@ body {
     </div>
 
     <div class="app-header-btns">
-      <button class="hbtn warn" id="verMismatchBtn" style="display:none;" onclick="showVersionMismatch()">⚠️ نسخة الـ Worker مختلفة</button>
+      <button class="hbtn warn" id="verStaleBtn" style="display:none;" onclick="showWorkerStale()">⚠️ الـ Worker نسخة قديمة</button>
       <button class="hbtn active-user" id="activeUserBtn" onclick="doLogout()">👤 —</button>
       <button class="hbtn" id="aboutBtn" onclick="openAbout()">ℹ️ عن الأداة</button>
       <button class="hbtn ver-btn" id="verBtn" onclick="openChangelog()"></button>
@@ -758,6 +758,7 @@ body {
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag fix">إصلاح</span><span><b>زرار "نسخة الـ Worker مختلفة" كان تحذير كاذب دايم</b> — كان بيقارن رقم الواجهة برقم الـ Worker تطابقًا حرفيًا، والرقمين مستقلين بالتصميم واختلافهم وضع طبيعي. بقى <b>"⚠️ الـ Worker نسخة قديمة"</b>: بيولّع بس لو الـ Worker أقدم من الحد الأدنى اللي الواجهة محتاجاه (2.5.0) — يعني rollback أو Promote ناقص</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>تاب سجل العمليات</b> — جدول بمعيار EcomModa الموحّد: فلاتر multi-select (الموظف · نوع العملية) + فلتر فترة + بحث + ترتيب على الأعمدة + ترقيم صفحات (100/صفحة) + تصدير XLSX لكل النتائج المطابقة للفلاتر</span></li>
             <li class="cl-item"><span class="cl-tag new">جديد</span><span>شريط تابات رئيسي + تثبيت الهيدر عند السكرول (الشريط بيتقفل وبيظهر بدله chip باسم التاب الحالي)</span></li>
             <li class="cl-item"><span class="cl-tag change">تغيير</span><span>عرض الأداة اتوسّع من 1040px لـ 1200px — أي أداة فيها جدول سجل مايجوزش تفضل على العرض الصغير</span></li>
@@ -875,6 +876,7 @@ body {
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط</li>
               <li><code>WORKER_URL</code> · <code>ADMIN_WORKER_URL</code> — ثوابت في §CONFIG (مش إعدادات ولا localStorage) — Standards #28</li>
               <li><code>LS_SECRET = 'order_cancel_worker_secret'</code> — المفتاح الوحيد في localStorage</li>
+              <li><code>MIN_WORKER_VERSION = '2.5.0'</code> — أقل نسخة Worker الصفحة بتشتغل معاها (الصفحة معتمدة على <code>get_logs_count</code> / <code>get_logs_export</code>). <b>مالهاش علاقة بـ <code>TOOL_VERSION</code></b> — أي endpoint جديد الصفحة تعتمد عليه لازم يرفعها في نفس التسليم</li>
               <li><code>currentOrder</code> — بيانات آخر أوردر اتبحث عنه، بيتصفّر بعد أي إلغاء ناجح أو logout</li>
               <li><code>liveCancelReasons</code> — قائمة الأسباب اللي جاية من lookup_order، بتتغيّر كل بحث</li>
               <li><code>WAREHOUSE_ACK_STATUSES = ['Confirmed','Ready']</code> — الحالات اللي بتطلب إقرار الإبلاغ</li>
@@ -887,6 +889,7 @@ body {
             <ul>
               <li><b>عمود "النتيجة" بيقرا <code>extra.result</code>.</b> الصفوف اللي اتكتبت قبل Worker v2.5.0 مالهاش الحقل ده، فبتتعرض "—" مش "✓" — إحنا فعليًا مش عارفين إن كانت اتأكدت وقتها ولا لأ</li>
               <li><b>حدود فلتر التاريخ بتوقيت UTC</b> زي ما الـ timestamp متخزّن في D1، والعرض بتوقيت القاهرة (UTC+3). فرق التلات ساعات ممكن يخلي عملية بعد ٩ مساءً بتوقيت القاهرة تقع في يوم UTC اللي بعده — مقبول لفلتر بالأيام، ومكتوب هنا عشان مايتكتشفش كباج</li>
+              <li><b>حارس نسخة الـ Worker حد أدنى مش تطابق.</b> <code>cmpVersion()</code> مقارنة رقمية (مش نصية — <code>"10"</code> أصغر من <code>"9"</code> كنص)، والتحذير يولّع بس لو الـ Worker <b>أقدم</b> من <code>MIN_WORKER_VERSION</code>. النمط القديم (تطابق حرفي) كان تحذير كاذب دايم، والموظف بيتعوّد يتجاهله فالحالة الحقيقية بتعدّي بلا إشارة</li>
               <li>فلاتر السجل بتتبعت للـ Worker كقوايم (<code>employees</code> · <code>types</code>) — امتداد مقصود على النسخة القياسية لدوال السجل، عشان الفلاتر multi-select. من غيره كانت الفلترة هتبقى على الصفحة المحمّلة بس وعدّاد النتائج يكدب</li>
               <li>الـ restock دايمًا true — مفيش خيار يدوي للموظف حاليًا (مطابق للمواصفة الأصلية)</li>
               <li>نتيجة "تم بس لسه قيد التأكيد" (⚠) معناها إن الـ Worker استنى الـ Job بتاع <code>orderCancel</code> لمدة ≈٦ ثوانٍ (backoff متصاعد 400→2200ms) و<code>cancelledAt</code> لسه ما اتسجّلش. دي <b>"ما قدرناش نتأكد"</b> — مش "تم" ومش "فشل". الـ Job بيكمل لوحده في الغالب، فالبانر فيه زرار <code>recheckCancelStatus()</code> بيعيد القراءة ويحوّله لأخضر لو اتأكد. لو فضلت صفرا بعد كذا محاولة، افتح الأوردر في شوبيفاي</li>
@@ -986,7 +989,13 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.3.0';
+const TOOL_VERSION = 'v1.4.0';
+
+// أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
+// get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
+// ⚠️ صيانة: أي endpoint جديد الصفحة تعتمد عليه → ارفع الرقم ده في نفس التسليم.
+// ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
+const MIN_WORKER_VERSION = '2.5.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -1096,16 +1105,38 @@ async function apiGet(action, params = {}) {
 }
 
 let workerVersion = null;
+
+// مقارنة رقمية — مش نصية. "10" أصغر من "9" لو اتقارنوا كنص.
+function cmpVersion(a, b) {
+  const pa = String(a).replace(/^v/, '').split('.').map(Number);
+  const pb = String(b).replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+// السؤال الصح مش "النسختين متطابقتين؟" — الرقمين مستقلين بالتصميم واختلافهم
+// وضع طبيعي (سكيل النقل §12). السؤال الصح: هل الـ Worker **جديد كفاية**
+// للصفحة دي؟ التحذير يولّع بس لو أقدم من الحد الأدنى — يعني rollback أو
+// بناء فاشل أو Promote ناقص.
 async function checkWorkerVersion() {
   try {
     const d = await apiGet('get_config');
     workerVersion = d.version || null;
-    const btn = document.getElementById('verMismatchBtn');
-    if (btn) btn.style.display = (workerVersion && workerVersion !== TOOL_VERSION.replace('v','')) ? '' : 'none';
-  } catch { /* الإعدادات لسه ممكن تكون مش مضبوطة */ }
+    const stale = workerVersion && cmpVersion(workerVersion, MIN_WORKER_VERSION) < 0;
+    const btn = document.getElementById('verStaleBtn');
+    if (btn) btn.style.display = stale ? '' : 'none';
+  } catch { /* الإعدادات ممكن تكون لسه مش مضبوطة */ }
 }
-function showVersionMismatch() {
-  showToast(`نسخة الـ Worker (${workerVersion}) مختلفة عن نسخة الواجهة (${TOOL_VERSION}) — راجع الاتنين`, 'error', 5000);
+
+function showWorkerStale() {
+  showToast(
+    `الـ Worker نسخته ${workerVersion} والواجهة محتاجة ${MIN_WORKER_VERSION} على الأقل — ` +
+    `التحديث على ما يبدو ما نزلش. راجع Deployments و Promote في كلاودفلير.`,
+    'error', 7000
+  );
 }
 
 async function runDiag() {

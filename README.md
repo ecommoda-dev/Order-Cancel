@@ -2,7 +2,7 @@
 
 # 🚫 إلغاء الأوردرات يدويًا — EcomModa
 
-![version](https://img.shields.io/badge/version-v1.3.0-blue)
+![version](https://img.shields.io/badge/version-v1.4.0-blue)
 
 أداة داخلية بتخلّي فريق خدمة العملاء يلغي أوردر **قبل الشحن** من غير الدخول على
 داشبورد شوبيفاي — مع فرض الشروط اللي بتمنع الإلغاء في الحالة أو الوقت الغلط.
@@ -69,7 +69,7 @@
 
 ```
 index.js        Worker v2.5.0 — Cloudflare Workers + D1 + Shopify Admin GraphQL
-index.html      الواجهة v1.3.0 — صفحة واحدة على GitHub Pages
+index.html      الواجهة v1.4.0 — صفحة واحدة على GitHub Pages
 wrangler.toml   اسم الـ Worker + D1 binding + SHOP_DOMAIN
 CLAUDE.md       قواعد الأداة وفخاخها والمسائل المفتوحة
 ```
@@ -84,6 +84,6 @@ CLAUDE.md       قواعد الأداة وفخاخها والمسائل المف
 `git push` على `main` بينشر الاتنين تلقائي: Cloudflare Workers Builds بينشر
 الـ Worker (~٢٣ ثانية)، وGitHub Pages بتنشر الواجهة (أبطأ — استنى دقيقة–اتنين).
 
-آخر تحديث: 01-09-2026 — 17:30
+آخر تحديث: 01-09-2026 — 18:40
 
 </div>
