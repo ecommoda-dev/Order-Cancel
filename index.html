@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<!-- skills: html-builder v6.0.0 · worker-builder v2.0.0 · constants v1.4.3 · order-lifecycle v1.2.0 — 01-09-2026 -->
+<!-- skills: html-builder v6.0.0 · worker-builder v2.0.0 · constants v1.4.3 · order-lifecycle v1.2.0 — 02-09-2026 -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>إلغاء الأوردرات يدويًا — EcomModa</title>
@@ -257,8 +257,10 @@ body {
 
 .reason-field { display: flex; flex-direction: column; gap: 6px; }
 .reason-field label { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
-.reason-select { border: 1.5px solid var(--border-strong); border-radius: var(--radius-sm); padding: 10px 12px; font-family: inherit; font-size: 13.5px; color: var(--text-primary); background: var(--surface); outline: none; width: 100%; }
-.reason-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(220,38,38,.08); }
+.reason-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.reason-chip { border: 1.5px solid var(--border-strong); border-radius: 20px; padding: 8px 16px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text-primary); background: var(--surface); outline: none; cursor: pointer; transition: all .15s; }
+.reason-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.reason-chip.selected { border-color: var(--accent); background: var(--accent); color: #fff; }
 
 .actions-row { display: flex; gap: 8px; justify-content: flex-end; }
 
@@ -828,6 +830,16 @@ body {
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">02-09-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>سبب الإلغاء بقى يتختار بضغطة واحدة</b> — بدل ما الموظف يفتح قائمة منسدلة (dropdown) ويدوّر جواها، كل الأسباب دلوقتي معروضة كـ chips (مربعات) قدّامه على طول، ويضغط على السبب مباشرةً. زرار "إلغاء الأوردر" بيفضل مقفول لحد ما يختار سبب</span></li>
+          </ul>
+        </div>
+
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v1.8.0</span>
             <span class="cl-ver-date">01-09-2026</span>
           </div>
           <ul class="cl-items">
@@ -915,7 +927,7 @@ body {
             <ol>
               <li>الموظف يكتب رقم الأوردر (12345 أو #12345)، أو الـ Order ID الطويل (7186861523266)، أو يلصق رابط الأوردر من داشبورد شوبيفاي</li>
               <li>الأداة تعرض اسم العميل، التليفون، العنوان بالتفصيل، الـ chips الأربعة (حالة الأوردر S1 · حالة الدفع · حالة الشحن · حالة الاسترجاع/الاستبدال)، وحالة الأهلية للإلغاء (✅/⛔)</li>
-              <li>لو مؤهل، الموظف يختار سبب الإلغاء من القائمة (بتتقرأ لايف من ميتافيلد شوبيفاي)</li>
+              <li>لو مؤهل، الموظف يختار سبب الإلغاء من الأسباب المعروضة كـ chips (بتتقرأ لايف من ميتافيلد شوبيفاي) بضغطة واحدة</li>
               <li>ضغط "إلغاء الأوردر" بيفتح نافذة تأكيد نهائية — وفيها إقرار إبلاغ الشحن/المخزن لو الأوردر Confirmed أو Ready</li>
               <li>بعد التأكيد: الأداة بتلغي الأوردر على شوبيفاي (restock + السبب مسجّل)، وبتستنى الـ Job وتتحقق فعليًا إن <code>cancelledAt</code> اتسجّل قبل ما تقول "تم"</li>
               <li>بعد ما الإلغاء يتأكد: بتحدّث <b>حالة الأوردر S1</b> (<code>custom.manual_status</code>) إلى <code>Cancelled</code></li>
@@ -1100,7 +1112,7 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.8.0';
+const TOOL_VERSION = 'v1.9.0';
 
 // أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
 // get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
@@ -1546,6 +1558,7 @@ function updateLoginSettingsBtn() {
 // ══════════════════════════════════════════════════════════════
 let currentOrder = null;
 let liveCancelReasons = [];
+let selectedReason = '';
 
 // ترجمة حالات شوبيفاي — نسخة احتياطية لو الـ Worker أقدم من v2.3.0 وما بعتش
 // financialStatusAr / fulfillmentStatusAr. المصدر الأساسي دايمًا رد الـ Worker.
@@ -1588,6 +1601,7 @@ async function lookupOrder() {
 
 function renderOrderCard(order, reasons) {
   const area = document.getElementById('orderArea');
+  selectedReason = '';
 
   // حالة الشحن: الـ Worker (v2.3.0+) بيحسبها ويرجّعها. لو الرد جاي من Worker أقدم
   // الحقل مش موجود خالص — ساعتها بنحسبها هنا من الحالة الخام بدل ما نفترض "مسموح".
@@ -1619,7 +1633,7 @@ function renderOrderCard(order, reasons) {
     <div class="info-line ltr">📞 ${addr.phone || order.customerPhone || '—'}</div>
   ` : `<div class="info-line">لا يوجد عنوان شحن مسجّل على الأوردر</div>`;
 
-  const reasonOptions = reasons.map(r => `<option value="${r.replace(/"/g,'&quot;')}">${r}</option>`).join('');
+  const reasonChips = reasons.map(r => `<button type="button" class="reason-chip" data-reason="${r.replace(/"/g,'&quot;')}" onclick="selectReasonChip(this)">${r}</button>`).join('');
 
   area.innerHTML = `
     <div class="order-card">
@@ -1653,10 +1667,7 @@ function renderOrderCard(order, reasons) {
       ${eligible ? `
       <div class="reason-field">
         <label>سبب الإلغاء</label>
-        <select class="reason-select" id="reasonSelect" onchange="document.getElementById('cancelBtn').disabled = !this.value;">
-          <option value="">— اختر السبب —</option>
-          ${reasonOptions}
-        </select>
+        <div class="reason-chips" id="reasonChips">${reasonChips}</div>
       </div>
       <div class="actions-row">
         <button class="btn btn-danger" id="cancelBtn" disabled onclick="openCancelConfirm()">🚫 إلغاء الأوردر</button>
@@ -1668,9 +1679,17 @@ function renderOrderCard(order, reasons) {
   `;
 }
 
+function selectReasonChip(btn) {
+  const wrap = document.getElementById('reasonChips');
+  if (wrap) wrap.querySelectorAll('.reason-chip').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedReason = btn.dataset.reason || '';
+  const cancelBtn = document.getElementById('cancelBtn');
+  if (cancelBtn) cancelBtn.disabled = !selectedReason;
+}
+
 function openCancelConfirm() {
-  const reasonSelect = document.getElementById('reasonSelect');
-  const reasonLabel = reasonSelect ? reasonSelect.value : '';
+  const reasonLabel = selectedReason;
   if (!reasonLabel) { showToast('اختار سبب الإلغاء أولاً', 'error'); return; }
   if (!currentOrder) return;
 
@@ -1842,6 +1861,7 @@ function showResultStep(bannerHtml) {
 function resetToSearch() {
   currentOrder = null;
   liveCancelReasons = [];
+  selectedReason = '';
   document.getElementById('resultStepBody').innerHTML = '';
   document.getElementById('resultStepOrder').innerHTML = '';
   document.getElementById('resultStep').style.display = 'none';
