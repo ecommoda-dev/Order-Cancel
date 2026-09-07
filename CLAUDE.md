@@ -95,13 +95,13 @@ Production branch : main · Builds for non-production branches: مفعّلة
 Deploy command    : npx wrangler deploy · Version: npx wrangler versions upload
 ```
 
-**النسخة المنشورة وقت آخر تحديث للملف ده:** Worker `v2.8.0` (من دمج PR #3،
-commit `40391a0`) — **متأكَّدة بقراءة الكود المنشور نفسه عبر MCP** يوم
-01-09-2026، مش من الداشبورد بالعين: `WORKER_VERSION = "2.8.0"` و
-`handleGetLogReasons` موجودة في الـ bundle المنشور.
-⏳ **`v2.9.0` (مزامنة المهارات) و`v2.10.0` (`Pending Edit`) لسه ما اتأكّدوش
-منشورين** — التأكيد بيتعمل بعد الدمج بقراءة `WORKER_VERSION` من الكود المنشور
-عبر MCP، مش من الداشبورد بالعين.
+**النسخة المنشورة وقت آخر تحديث للملف ده:** Worker `v2.10.0` (من دمج PR #7)
+— **متأكَّدة بقراءة الكود المنشور نفسه عبر MCP** يوم 07-09-2026، مش من الداشبورد
+بالعين: `WORKER_VERSION = "2.10.0"` و
+`ALLOWED_MANUAL_STATUS = ["New Order","Confirmed","Pending Edit","Ready"]` و
+`WAREHOUSE_ACK_STATUSES = ["Confirmed","Pending Edit","Ready"]` كلهم في الـ bundle
+المنشور. (وده بيقفل كمان تأكيد `v2.9.0` — النسخة المنشورة عدّتها.)
+قبلها كانت `v2.8.0` (دمج PR #3، commit `40391a0`) متأكَّدة بنفس الطريقة 01-09-2026.
 
 **تصنيف الـ `env.*` (سكيل النقل §4-أ-٢):**
 
