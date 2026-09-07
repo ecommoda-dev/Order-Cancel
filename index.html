@@ -830,6 +830,17 @@ body {
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">07-09-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>حالة <code>Pending Edit</code> بقت مؤهّلة للإلغاء</b> — قبل كده الأداة كانت بترفض الأوردر اللي حالته <code>Pending Edit</code> (صنف طلع مش متوفر وقت التجهيز واتخصم، وخدمة العملاء بتتابع العميل لحد ما يوافق على التعديل). لو العميل رفض التعديل، الإلغاء هو النهاية الطبيعية للحالة — والموظف كان بيضطر يلغي من داشبورد شوبيفاي، وساعتها الإلغاء <b>مابيتسجّلش في سجل الأداة خالص</b>. المسموح دلوقتي: <code>New Order</code> · <code>Confirmed</code> · <code>Pending Edit</code> · <code>Ready</code></span></li>
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>إقرار إبلاغ الشحن/المخزن مطلوب في <code>Pending Edit</code> كمان</b> — الحالة دي مصدرها المخزن نفسه وقت التجهيز والأوردر متحجوز فيه فعلاً، فنافذة التأكيد بتطلب الإقرار زي <code>Confirmed</code> و<code>Ready</code> بالظبط</span></li>
+          </ul>
+        </div>
+
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v1.9.0</span>
             <span class="cl-ver-date">02-09-2026</span>
           </div>
           <ul class="cl-items">
@@ -913,7 +924,7 @@ body {
 
             <h4>شروط الإلغاء — الخمسة لازم يتحققوا كلهم</h4>
             <ol>
-              <li>حالة الأوردر S1 (manual_status) لازم تكون <code>New Order</code> أو <code>Confirmed</code> أو <code>Ready</code></li>
+              <li>حالة الأوردر S1 (manual_status) لازم تكون <code>New Order</code> أو <code>Confirmed</code> أو <code>Pending Edit</code> أو <code>Ready</code> — <code>Pending Edit</code> اتضافت في Worker v2.10.0 (قرار أحمد 07-09-2026): الحالة معناها إن صنف طلع مش متوفر وقت التجهيز واتخصم من الأوردر وخدمة العملاء بتتابع العميل، فلو رفض التعديل يبقى الإلغاء هو النهاية الطبيعية للحالة</li>
               <li>حالة الدفع (displayFinancialStatus) لازم تكون <code>PENDING</code> — غير مدفوع (لسه ملهوش تحصيل COD)</li>
               <li>حالة الشحن (displayFulfillmentStatus) لازم تكون <code>UNFULFILLED</code> — لم يتم الشحن. الشرط ده مضاف في Worker v2.3.0: حسب <code>ecommoda-order-lifecycle</code> قاعدة 2، إلغاء أوردر متشحن بيتصنّف <b>RTO</b> في كل تقارير الستاك مش إلغاء — رقم تاني تمامًا. وقاعدة 5 بتقول إن <code>Ready + Fulfilled</code> وضع شرعي (محاولة تسليم مُعادة)، يعني حالة S1 لوحدها ما كانتش بتمنع الحالة دي</li>
               <li>مفيش أي طلب استرجاع/استبدال مفتوح على الأوردر — ده مستحيل عمليًا في المراحل دي أصلًا (S2 بيتفعّل بس بعد Delivered)، وشوبيفاي نفسها بترفض الإلغاء لو فيه return شغّال</li>
@@ -921,14 +932,14 @@ body {
             </ol>
 
             <h4>إقرار إبلاغ الشحن/المخزن</h4>
-            <p>لو حالة الأوردر <code>Confirmed</code> أو <code>Ready</code> — يعني اتأكد أو اتجهّز في المخزن فعلاً — نافذة التأكيد بتعرض checkbox: <b>"هل أبلغت مسئول الشحن/المخزن بإلغاء الأوردر قبل تنفيذ الطلب؟"</b>، وزرار التنفيذ بيفضل مقفول لحد ما الموظف يأكّد. الـ Worker بيرفض الطلب كمان لو الإقرار ناقص (دفاع تاني)، والقيمة بتتسجّل في <code>extra.warehouseNotified</code> في D1. <code>New Order</code> مش محتاج الإقرار — الأوردر لسه ما وصلش لحد.</p>
+            <p>لو حالة الأوردر <code>Confirmed</code> أو <code>Pending Edit</code> أو <code>Ready</code> — يعني اتأكد أو اتجهّز في المخزن فعلاً (و<code>Pending Edit</code> مصدرها المخزن نفسه وقت التجهيز، يعني الأوردر متحجوز هناك) — نافذة التأكيد بتعرض checkbox: <b>"هل أبلغت مسئول الشحن/المخزن بإلغاء الأوردر قبل تنفيذ الطلب؟"</b>، وزرار التنفيذ بيفضل مقفول لحد ما الموظف يأكّد. الـ Worker بيرفض الطلب كمان لو الإقرار ناقص (دفاع تاني)، والقيمة بتتسجّل في <code>extra.warehouseNotified</code> في D1. <code>New Order</code> مش محتاج الإقرار — الأوردر لسه ما وصلش لحد.</p>
 
             <h4>كيف تعمل — Workflow</h4>
             <ol>
               <li>الموظف يكتب رقم الأوردر (12345 أو #12345)، أو الـ Order ID الطويل (7186861523266)، أو يلصق رابط الأوردر من داشبورد شوبيفاي</li>
               <li>الأداة تعرض اسم العميل، التليفون، العنوان بالتفصيل، الـ chips الأربعة (حالة الأوردر S1 · حالة الدفع · حالة الشحن · حالة الاسترجاع/الاستبدال)، وحالة الأهلية للإلغاء (✅/⛔)</li>
               <li>لو مؤهل، الموظف يختار سبب الإلغاء من الأسباب المعروضة كـ chips (بتتقرأ لايف من ميتافيلد شوبيفاي) بضغطة واحدة</li>
-              <li>ضغط "إلغاء الأوردر" بيفتح نافذة تأكيد نهائية — وفيها إقرار إبلاغ الشحن/المخزن لو الأوردر Confirmed أو Ready</li>
+              <li>ضغط "إلغاء الأوردر" بيفتح نافذة تأكيد نهائية — وفيها إقرار إبلاغ الشحن/المخزن لو الأوردر Confirmed أو Pending Edit أو Ready</li>
               <li>بعد التأكيد: الأداة بتلغي الأوردر على شوبيفاي (restock + السبب مسجّل)، وبتستنى الـ Job وتتحقق فعليًا إن <code>cancelledAt</code> اتسجّل قبل ما تقول "تم"</li>
               <li>بعد ما الإلغاء يتأكد: بتحدّث <b>حالة الأوردر S1</b> (<code>custom.manual_status</code>) إلى <code>Cancelled</code></li>
               <li>النتيجة بتعرض سطر <b>"ما تم فعليًا"</b> — كل خطوة حصلت فعلاً، مش وصف عام</li>
@@ -942,7 +953,7 @@ body {
             <h4>⚙️ إجراءات الإلغاء — الترتيب والشروط</h4>
             <table>
               <tr><th>الإجراء</th><th>الشرط</th></tr>
-              <tr><td>إلغاء الأوردر على شوبيفاي + <code>restock</code></td><td>الشروط الخمسة كلها متحققة + الإقرار (لو Confirmed/Ready)</td></tr>
+              <tr><td>إلغاء الأوردر على شوبيفاي + <code>restock</code></td><td>الشروط الخمسة كلها متحققة + الإقرار (لو Confirmed/Pending Edit/Ready)</td></tr>
               <tr><td>كتابة <code>custom.cancel_manual_reason</code></td><td>بعد قبول ميوتيشن الإلغاء مباشرةً</td></tr>
               <tr><td>انتظار الـ Job + تأكيد <code>cancelledAt</code></td><td>backoff متصاعد لحد ≈٦ ثوانٍ</td></tr>
               <tr><td>تحديث <code>custom.manual_status</code> = <code>Cancelled</code></td><td><b>بعد التأكيد بس</b>، والانتقال لازم يكون شرعي (<code>New Order</code>/<code>Confirmed</code>/<code>Ready</code>… → <code>Cancelled</code>)</td></tr>
@@ -989,10 +1000,11 @@ body {
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط</li>
               <li><code>WORKER_URL</code> · <code>ADMIN_WORKER_URL</code> — ثوابت في §CONFIG (مش إعدادات ولا localStorage) — Standards #28</li>
               <li><code>LS_SECRET = 'order_cancel_worker_secret'</code> — المفتاح الوحيد في localStorage</li>
-              <li><code>MIN_WORKER_VERSION = '2.8.0'</code> — أقل نسخة Worker الصفحة بتشتغل معاها (الصفحة معتمدة على <code>get_log_reasons</code> وعلى باراميتر <code>reasons</code>، الاتنين من Worker v2.8.0). <b>مالهاش علاقة بـ <code>TOOL_VERSION</code></b> — أي endpoint جديد الصفحة تعتمد عليه لازم يرفعها في نفس التسليم</li>
+              <li><code>MIN_WORKER_VERSION = '2.10.0'</code> — أقل نسخة Worker الصفحة بتشتغل معاها (الصفحة بتوصف <code>Pending Edit</code> كحالة مسموح الإلغاء منها، وده من Worker v2.10.0؛ وقبلها <code>get_log_reasons</code> وباراميتر <code>reasons</code> من v2.8.0). <b>مالهاش علاقة بـ <code>TOOL_VERSION</code></b> — أي endpoint جديد الصفحة تعتمد عليه لازم يرفعها في نفس التسليم</li>
               <li><code>currentOrder</code> — بيانات آخر أوردر اتبحث عنه. <b>بيفضل موجود طول ما إنت في خطوة النتيجة</b> (زرار "تحقق من شوبيفاي الآن" بيحتاجه)، وبيتصفّر في <code>resetToSearch()</code> — يعني عند الضغط على "إلغاء أوردر آخر؟" أو عند الـ logout</li>
               <li><code>liveCancelReasons</code> — قائمة الأسباب اللي جاية من lookup_order، بتتغيّر كل بحث</li>
-              <li><code>WAREHOUSE_ACK_STATUSES = ['Confirmed','Ready']</code> — الحالات اللي بتطلب إقرار الإبلاغ</li>
+              <li><code>liveAllowedS1</code> — حالات S1 المسموح الإلغاء منها زي ما الـ Worker بعتها (<code>allowedManualStatuses</code>). بتستخدم في <b>نص سبب الرفض</b> بس عشان الرسالة ما تقولش قايمة والـ Worker بيطبّق غيرها — الحكم نفسه من <code>canCancelByManualStatus</code></li>
+              <li><code>WAREHOUSE_ACK_STATUSES = ['Confirmed','Pending Edit','Ready']</code> — الحالات اللي بتطلب إقرار الإبلاغ</li>
               <li><code>FINANCIAL_STATUS_AR</code> · <code>FULFILLMENT_STATUS_AR</code> — ترجمة حالات شوبيفاي، نسخة احتياطية لو الـ Worker أقدم من v2.3.0</li>
               <li><code>msState</code> — حالة فلاتر السجل (<code>emp</code> · <code>type</code> · <code>reason</code>): العناصر + المختار + بحث القائمة. عناصر <code>emp</code> و<code>reason</code> بتتحمّل من الـ Worker — ممنوع أي قيمة hardcoded فيهم</li>
               <li><code>LOG_PAGE_SIZE = 100</code> · <code>sortState { key, dir }</code> · <code>dateFilterActive</code></li>
@@ -1112,13 +1124,13 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.9.0';
+const TOOL_VERSION = 'v1.10.0';
 
 // أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
 // get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
 // ⚠️ صيانة: أي endpoint جديد الصفحة تعتمد عليه → ارفع الرقم ده في نفس التسليم.
 // ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
-const MIN_WORKER_VERSION = '2.8.0';
+const MIN_WORKER_VERSION = '2.10.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -1558,6 +1570,10 @@ function updateLoginSettingsBtn() {
 // ══════════════════════════════════════════════════════════════
 let currentOrder = null;
 let liveCancelReasons = [];
+// حالات S1 المسموح الإلغاء منها — بتيجي من الـ Worker مع كل lookup (مصدر واحد
+// للحقيقة). الواجهة بتستخدمها في نص سبب الرفض بس؛ الحكم نفسه من الـ Worker
+// (canCancelByManualStatus)، فالقايمة دي عمرها ما بتوسّع صلاحية.
+let liveAllowedS1 = [];
 let selectedReason = '';
 
 // ترجمة حالات شوبيفاي — نسخة احتياطية لو الـ Worker أقدم من v2.3.0 وما بعتش
@@ -1574,7 +1590,9 @@ const FULFILLMENT_STATUS_AR = {
 
 // الحالات اللي الأوردر فيها بيبقى اتأكد/اتجهّز فعلاً — لازم إقرار إن الشحن/المخزن
 // اتبلّغ قبل الإلغاء. New Order لسه ما وصلش لحد، فمش محتاج الإقرار.
-const WAREHOUSE_ACK_STATUSES = ['Confirmed', 'Ready'];
+// ⚠️ Pending Edit جوّه القايمة: الحالة دي **مصدرها المخزن** وقت التجهيز (صنف طلع
+// مش متوفر)، يعني الأوردر متحجوز هناك فعلاً — الإقرار فيها ألزم مش أقل.
+const WAREHOUSE_ACK_STATUSES = ['Confirmed', 'Pending Edit', 'Ready'];
 
 async function lookupOrder() {
   const input = document.getElementById('orderInput');
@@ -1591,6 +1609,7 @@ async function lookupOrder() {
     if (!data.ok) { area.innerHTML = `<div class="empty-state">${data.error || 'لم يتم العثور على الأوردر'}</div>`; return; }
     currentOrder = data.order;
     liveCancelReasons = data.cancelReasons || [];
+    liveAllowedS1 = Array.isArray(data.allowedManualStatuses) ? data.allowedManualStatuses : [];
     renderOrderCard(data.order, liveCancelReasons);
   } catch (err) {
     area.innerHTML = `<div class="empty-state">❌ ${err.message}</div>`;
@@ -1619,7 +1638,11 @@ function renderOrderCard(order, reasons) {
 
   const failReasons = [];
   if (order.alreadyCancelled) failReasons.push('الأوردر ملغي بالفعل');
-  if (!order.canCancelByManualStatus) failReasons.push(`حالة الأوردر S1 الحالية "${order.manualStatus || 'فارغة'}" — المسموح: New Order / Confirmed / Ready`);
+  // القايمة من الـ Worker (liveAllowedS1) — مصدر واحد للحقيقة. الـ fallback
+  // بيشتغل بس لو الـ Worker ما بعتهاش، وساعتها بيوصف الشروط القديمة اللي
+  // الـ Worker ده بيطبّقها فعلاً — مش اللي المفروض يطبّقها.
+  const allowedS1 = liveAllowedS1.length ? liveAllowedS1 : ['New Order', 'Confirmed', 'Ready'];
+  if (!order.canCancelByManualStatus) failReasons.push(`حالة الأوردر S1 الحالية "${order.manualStatus || 'فارغة'}" — المسموح: ${allowedS1.join(' / ')}`);
   if (!order.canCancelByFinancialStatus) failReasons.push(`حالة الدفع "${finLabel}" — المسموح: غير مدفوع (PENDING) فقط`);
   if (!fulfillmentOk) failReasons.push(`حالة الشحن "${fulLabel}" — المسموح: لم يتم الشحن (UNFULFILLED) فقط. الأوردر اللي اتشحن فعلاً إلغاؤه بيتسجّل RTO مش إلغاء`);
   if (order.hasOpenReturn) failReasons.push('يوجد طلب استرجاع/استبدال مفتوح على الأوردر');
@@ -1704,7 +1727,7 @@ function openCancelConfirm() {
   const newBtn = oldBtn.cloneNode(true);
   oldBtn.parentNode.replaceChild(newBtn, oldBtn);
 
-  // Confirmed / Ready = الأوردر اتأكد أو اتجهّز في المخزن — الإلغاء لازم يكون
+  // Confirmed / Pending Edit / Ready = الأوردر اتأكد أو اتجهّز في المخزن — الإلغاء لازم يكون
   // مسبوق بإبلاغ مسئول الشحن/المخزن، وإلا القطعة تتشحن بعد الإلغاء.
   const needsAck = WAREHOUSE_ACK_STATUSES.includes(currentOrder.manualStatus);
   const checkRow = document.getElementById('confirmCheckRow');
@@ -1861,6 +1884,7 @@ function showResultStep(bannerHtml) {
 function resetToSearch() {
   currentOrder = null;
   liveCancelReasons = [];
+  liveAllowedS1 = [];
   selectedReason = '';
   document.getElementById('resultStepBody').innerHTML = '';
   document.getElementById('resultStepOrder').innerHTML = '';

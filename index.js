@@ -1,9 +1,32 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.9.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.10.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v2.0.0 · html-builder v6.0.0 · constants v1.4.3 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.2.0 — 01-09-2026
 ////
+// CHANGELOG v2.10.0:
+//   🟡 [تغيير] `Pending Edit` بقت حالة S1 **مسموح الإلغاء منها** — قرار أحمد
+//       07-09-2026. `ALLOWED_MANUAL_STATUS` بقت
+//       `New Order · Confirmed · Pending Edit · Ready`.
+//       السبب: `Pending Edit` معناها (order-lifecycle §الحالات بند 6) إن صنف
+//       طلع **مش متوفر وقت التجهيز** واتخصم من الأوردر، وخدمة العملاء بتتابع
+//       العميل لحد ما يوافق على التعديل. لو العميل رفض التعديل، الإلغاء هو
+//       النهاية الطبيعية للحالة دي — وقبل كده الأداة كانت بترفضه فالموظف
+//       بيروح يلغي من داشبورد شوبيفاي يدويًا، والإلغاء ده **مالوش صف في D1**
+//       (نفس الفجوة الموثّقة في CLAUDE.md: "أوردر ملغي ≠ اتلغى بالأداة دي").
+//       الانتقال `Pending Edit → Cancelled` كان **شرعي أصلاً** في
+//       `CAN_TRANSITION_TO_CANCELLED` (order-lifecycle §جدول الانتقالات)،
+//       يعني الرفض كان في بوابة الأداة بس مش في دورة حياة الأوردر.
+//   🔴 [جديد] `Pending Edit` اتضافت لـ `WAREHOUSE_ACK_STATUSES` كمان — الأوردر
+//       في الحالة دي **متحجوز فعليًا في المخزن** (الحالة جاية من المخزن نفسه
+//       أثناء الـ picking/packing)، فالإلغاء من غير إبلاغ مسئول الشحن/المخزن
+//       بيسيب طرد متجهّز جزئيًا من غير ما حد يعرف إنه اتلغى. الإقرار إلزامي
+//       زي `Confirmed`/`Ready` بالظبط.
+//   ⚪ [تغيير] رسالة رفض `manual_status` بقت بتتبني من `ALLOWED_MANUAL_STATUS`
+//       نفسها بدل قايمة مكتوبة بالإيد في نص الرسالة — القايمة كانت مكرّرة في
+//       مكانين، وأي إضافة جاية كانت هتسيب الرسالة بتقول حاجة والكود بيعمل
+//       حاجة تانية.
+//
 // CHANGELOG v2.9.0 (مزامنة مع ecommoda-worker-builder v2.0.0):
 //   🟡 [تغيير] كتلة السجل في §SHARED رجعت **مطابقة للنسخة القياسية** في
 //       `references/shared-functions.md` بعد ما المهارة تبنّت الامتداد نفسه في
@@ -166,8 +189,8 @@
 //   🟡 [جديد] shippingAddress بقت بترجع مع الأوردر (اسم/عنوان/مدينة/محافظة/
 //       كود بريدي/دولة/تليفون) — عشان واجهة الأداة تقدر تعرض تفاصيل العنوان.
 //
-// ⚠️ manual_status المسموح فضل New Order/Confirmed/Ready (زي ما كان) —
-//     أحمد قرر نسيبه زي ما هو، مش New Order بس.
+// ⚠️ manual_status المسموح: New Order/Confirmed/Pending Edit/Ready —
+//     `Pending Edit` اتضافت في v2.10.0 (قرار أحمد 07-09-2026)، والباقي زي ما كان.
 // ⚠️ سبب الإلغاء المرفوع لشوبيفاي ثابت OTHER دايمًا — شوف v2.2.0 فوق.
 // ══════════════════════════════════════════════════════
 
@@ -175,14 +198,19 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.9.0";
+const WORKER_VERSION = "2.10.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
   "https://ecommoda-dev.github.io",
 ];
 
-const ALLOWED_MANUAL_STATUS = new Set(["New Order", "Confirmed", "Ready"]);
+// ⚠️ الترتيب هنا هو ترتيب دورة الحياة — رسالة الرفض اللي بيشوفها الموظف بتتبني
+// من الـ Set دي مباشرة، فأي إضافة جديدة بتظهر في الرسالة من غير تعديل تاني.
+// `Pending Edit` مسموحة من v2.10.0: صنف طلع مش متوفر وقت التجهيز واتخصم، ولو
+// العميل رفض التعديل يبقى الإلغاء هو النهاية الطبيعية للحالة (قرار أحمد
+// 07-09-2026). الانتقال منها لـ Cancelled شرعي أصلاً في دورة حياة الأوردر.
+const ALLOWED_MANUAL_STATUS = new Set(["New Order", "Confirmed", "Pending Edit", "Ready"]);
 const ALLOWED_FINANCIAL_STATUS = new Set(["PENDING"]);
 
 // شرط رابع — الأوردر لازم يكون لسه ما اتشحنش.
@@ -197,7 +225,9 @@ const ALLOWED_FULFILLMENT_STATUS = new Set(["UNFULFILLED"]);
 
 // الحالات اللي الأوردر فيها بيبقى اتأكد أو اتجهّز في المخزن — الإلغاء فيها لازم
 // يكون مسبوق بإبلاغ مسئول الشحن/المخزن. New Order لسه ما وصلش لحد.
-const WAREHOUSE_ACK_STATUSES = new Set(["Confirmed", "Ready"]);
+// ⚠️ `Pending Edit` جوّه القايمة دي (من v2.10.0) لأن الحالة **مصدرها المخزن**
+// أثناء التجهيز والأوردر متحجوز فيه فعلاً — يعني أخطر من Confirmed مش أقل.
+const WAREHOUSE_ACK_STATUSES = new Set(["Confirmed", "Pending Edit", "Ready"]);
 
 // الحالات المسموحة بالعربي — الواجهة بتعرضها في الـ chips وفي أسباب الرفض
 const FINANCIAL_STATUS_AR = {
@@ -954,7 +984,8 @@ async function handleCancelOrder(request, env) {
   }
   if (!ALLOWED_MANUAL_STATUS.has(orderBefore.manualStatus)) {
     return badRequest(
-      `غير مسموح بإلغاء الأوردر لأن manual_status = "${orderBefore.manualStatus || "فارغ"}". المسموح: New Order / Confirmed / Ready`,
+      `غير مسموح بإلغاء الأوردر لأن manual_status = "${orderBefore.manualStatus || "فارغ"}". ` +
+      `المسموح: ${Array.from(ALLOWED_MANUAL_STATUS).join(" / ")}`,
       request
     );
   }
@@ -972,7 +1003,7 @@ async function handleCancelOrder(request, env) {
       request
     );
   }
-  // Confirmed / Ready = الأوردر اتأكد أو اتجهّز في المخزن فعلاً. الإلغاء من غير
+  // Confirmed / Pending Edit / Ready = الأوردر اتأكد أو اتجهّز في المخزن فعلاً. الإلغاء من غير
   // إبلاغ مسئول الشحن/المخزن بيسيب قطعة متجهّزة تتشحن بعد الإلغاء. الواجهة بتمنعها
   // بـ checkbox، والفحص ده هو الدفاع التاني — نفس منطق فحص manual_status فوق.
   if (WAREHOUSE_ACK_STATUSES.has(orderBefore.manualStatus) && !warehouseNotified) {
