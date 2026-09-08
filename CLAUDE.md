@@ -95,11 +95,13 @@ Production branch : main · Builds for non-production branches: مفعّلة
 Deploy command    : npx wrangler deploy · Version: npx wrangler versions upload
 ```
 
-⚠️ **Worker `v2.11.0` / الواجهة `v1.11.0` (08-09-2026) لسه مش متأكَّدين من النسخة
-المنشورة** — التحديث ده اتكتب وقت الدمج، والتأكيد بقراءة الـ bundle عبر MCP لسه
-ما اتعملش. أول مراجعة جاية تقرا `WORKER_VERSION` من الكود المنشور وتقفل السطر ده.
-
-**النسخة المنشورة المتأكَّدة آخر مرة:** Worker `v2.10.0` (من دمج PR #7)
+**النسخة المنشورة وقت آخر تحديث للملف ده:** Worker `v2.11.0` (من دمج PR #9)
+— **متأكَّدة بقراءة الكود المنشور نفسه عبر MCP** يوم 08-09-2026، مش من الداشبورد
+بالعين: `WORKER_VERSION = "2.11.0"` و
+`ALLOWED_MANUAL_STATUS = ["New Order","WhatsApp-CANCELLED","Confirmed","Pending Edit","Ready"]`
+و`WAREHOUSE_ACK_STATUSES = ["Confirmed","Pending Edit","Ready"]` (من غير
+`WhatsApp-CANCELLED` — القرار المقصود) كلهم في الـ bundle المنشور.
+قبلها كانت Worker `v2.10.0` (من دمج PR #7)
 — **متأكَّدة بقراءة الكود المنشور نفسه عبر MCP** يوم 07-09-2026، مش من الداشبورد
 بالعين: `WORKER_VERSION = "2.10.0"` و
 `ALLOWED_MANUAL_STATUS = ["New Order","Confirmed","Pending Edit","Ready"]` و
