@@ -1,9 +1,44 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.11.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.12.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v2.0.0 · html-builder v6.0.0 · constants v1.4.3 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.2.0 — 01-09-2026
 ////
+// CHANGELOG v2.12.0:
+//   🟡 [تغيير] `VOIDED` بقت حالة دفع **مسموح الإلغاء منها** — قرار أحمد
+//       10-09-2026. `ALLOWED_FINANCIAL_STATUS` بقت `PENDING · VOIDED`.
+//       السبب: تعديل الأوردر (Order Edit) اللي بيشيل كل الأصناف — أو بيودّي
+//       الإجمالي لصفر — بيخلّي شوبيفاي **تـ void الـ transaction بتاعة الـ COD
+//       تلقائيًا**، فحالة الدفع بتبقى `VOIDED` والأوردر **لسه حي** (`cancelledAt
+//       = null`). ده بالظبط اللي بيحصل في `Pending Edit` لما العميل يرفض
+//       التعديل: الحالة مسموح الإلغاء منها من v2.10.0، بس بوابة حالة الدفع
+//       كانت لسه بترفض — فالموظف بيروح يلغي من داشبورد شوبيفاي والإلغاء
+//       **مالوش صف في D1** (نفس فجوة "أوردر ملغي ≠ اتلغى بالأداة دي").
+//       ⚠️ مفيش خطر فلوس: `VOIDED` معناها الـ authorization **اتلغت**، مش
+//       اتحصّلت — والـ void والـ capture متنافيين على نفس الـ transaction.
+//       متأكَّد على `#53640` (10-09-2026): `SALE/PENDING` + `VOID/SUCCESS`،
+//       و`totalOutstanding = 0` و`totalRefunded = 0`. فـ
+//       `originalPaymentMethodsRefund: false` فاضلة صح زي ما هي.
+//       ✅ وشوبيفاي نفسها مابترفضش الحالة دي: شروط `orderCancel` في التوثيق هي
+//       "مش ملغي قبل كده · مفيش pending payment authorizations · مفيش returns
+//       شغّالة · مفيش fulfillments ما ينفعش تتلغي" — والـ `VOIDED` **مستوفية
+//       الشرط التاني بشكل أوضح من `PENDING`** أصلاً (الحجز اتلغى خلاص).
+//   🔴 [فخ] **`VOIDED` هي كمان حالة الدفع الطبيعية لأوردر اتلغى خلاص** — بعد
+//       أي إلغاء `PENDING → VOIDED` (موثّق في CLAUDE.md §خط الأساس). يعني من
+//       بعد التغيير ده، اللي بيفرّق بين "اتلغى خلاص" و"الدفع اتلغى والأوردر
+//       لسه حي" هو **`cancelledAt` بس ولا حاجة تانية**. فحص `alreadyCancelled`
+//       (في `mapOrderNode` وفي `handleCancelOrder`) بقى **حامل الحِمل الوحيد**
+//       هنا — ممنوع يتشال أو يتخفّف تحت أي ظرف.
+//       جرد 10-09-2026: كل أوردرات المتجر بحالة `VOIDED` **ماعدا ٦** عندها
+//       `cancelledAt` مليان؛ الستة دول هم الحالة المستهدفة (٤ منهم
+//       `UNFULFILLED` والاتنين الباقيين `FULFILLED` — وبيتمنعوا ببوابة الشحن
+//       زي ما هي، من غير أي تغيير).
+//   ⚪ [تغيير] رسالة رفض حالة الدفع بقت **بتتبني من `ALLOWED_FINANCIAL_STATUS`
+//       نفسها** (بالعربي + الإنجليزي من `FINANCIAL_STATUS_AR`) بدل نص
+//       `"المسموح فقط: PENDING"` المكتوب بالإيد. نفس علاج رسالة
+//       `manual_status` في v2.10.0 — القايمة كانت مكرّرة في الـ Worker
+//       والواجهة، وأي توسيع كان هيسيب واحدة منهم بتكدب على الموظف.
+//
 // CHANGELOG v2.11.0:
 //   🟡 [تغيير] `WhatsApp-CANCELLED` بقت حالة S1 **مسموح الإلغاء منها** — قرار
 //       أحمد 08-09-2026. `ALLOWED_MANUAL_STATUS` بقت
@@ -218,7 +253,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.11.0";
+const WORKER_VERSION = "2.12.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -238,7 +273,17 @@ const ALLOWED_ORIGINS = [
 const ALLOWED_MANUAL_STATUS = new Set([
   "New Order", "WhatsApp-CANCELLED", "Confirmed", "Pending Edit", "Ready",
 ]);
-const ALLOWED_FINANCIAL_STATUS = new Set(["PENDING"]);
+// حالات الدفع المسموح الإلغاء منها.
+// `PENDING` = الحالة الطبيعية لأوردر COD لسه ملهوش تحصيل.
+// `VOIDED` مسموحة من v2.12.0 (قرار أحمد 10-09-2026): تعديل الأوردر اللي بيشيل
+// كل الأصناف أو بيودّي الإجمالي لصفر بيخلّي شوبيفاي تعمل void للـ transaction
+// تلقائيًا، فالأوردر بيقعد **حي** بحالة دفع `VOIDED` ومحتاج إلغاء يدوي.
+// مفيش خطر فلوس: void معناها الحجز اتلغى، مش اتحصّل — والـ void والـ capture
+// متنافيين على نفس الـ transaction، فمفيش حاجة تترد.
+// 🔴 `VOIDED` هي **كمان** حالة الدفع بتاعة أوردر اتلغى خلاص (`PENDING → VOIDED`
+// بعد أي إلغاء). يعني الفرق الوحيد بين الاتنين هو `cancelledAt` — وفحص
+// `alreadyCancelled` بقى حامل الحِمل الوحيد هنا. ممنوع يتشال.
+const ALLOWED_FINANCIAL_STATUS = new Set(["PENDING", "VOIDED"]);
 
 // شرط رابع — الأوردر لازم يكون لسه ما اتشحنش.
 // السبب مش شكلي: ecommoda-order-lifecycle قاعدة 2 بتقول إن
@@ -283,6 +328,14 @@ const FULFILLMENT_STATUS_AR = {
   OPEN:                "مفتوح",
   PENDING_FULFILLMENT: "في انتظار الشحن",
 };
+
+// نص الحالات المسموحة — بيتبني من الـ Set نفسها مش مكتوب بالإيد، عشان أي توسيع
+// جاي يظهر في رسالة الرفض تلقائيًا. نفس علاج رسالة manual_status في v2.10.0.
+function allowedFinancialStatusText() {
+  return Array.from(ALLOWED_FINANCIAL_STATUS)
+    .map(st => `${FINANCIAL_STATUS_AR[st] || st} (${st})`)
+    .join(" / ");
+}
 
 // كل الإلغاءات بتترفع لشوبيفاي بسبب واحد ثابت: OTHER.
 // قرار أحمد 01-09-2026 — جدول التصنيف (REASON_ENUM_MAP) اتشال بالكامل.
@@ -788,8 +841,9 @@ async function cancelOrderInShopify(env, token, { orderId, notifyCustomer, resto
   const variables = {
     orderId,
     notifyCustomer: !!notifyCustomer,
-    // COD-آمن: مفيش transaction مقبوضة أصلاً (financial_status = PENDING) —
-    // فمفيش حاجة نرجّعها على وسيلة الدفع الأصلية.
+    // COD-آمن: مفيش transaction مقبوضة أصلاً — لا في PENDING (لسه ملهاش تحصيل)
+    // ولا في VOIDED (الحجز اتلغى، والـ void والـ capture متنافيين على نفس الـ
+    // transaction). فمفيش حاجة نرجّعها على وسيلة الدفع الأصلية في الحالتين.
     refundMethod: { originalPaymentMethodsRefund: false },
     restock: !!restock,
     reason: shopifyReason,
@@ -1022,7 +1076,8 @@ async function handleCancelOrder(request, env) {
   }
   if (!ALLOWED_FINANCIAL_STATUS.has(orderBefore.displayFinancialStatus)) {
     return badRequest(
-      `غير مسموح بإلغاء الأوردر لأن financial status = "${orderBefore.displayFinancialStatus || "فارغ"}". المسموح فقط: PENDING`,
+      `غير مسموح بإلغاء الأوردر لأن financial status = "${orderBefore.displayFinancialStatus || "فارغ"}". ` +
+      `المسموح: ${allowedFinancialStatusText()}`,
       request
     );
   }

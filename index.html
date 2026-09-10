@@ -830,6 +830,17 @@ body {
         <div class="cl-version-block">
           <div class="cl-version-row">
             <span class="cl-ver-badge" id="clLatestVerBadge"></span>
+            <span class="cl-ver-date">10-09-2026</span>
+          </div>
+          <ul class="cl-items">
+            <li class="cl-item"><span class="cl-tag new">جديد</span><span><b>الأوردر اللي حالة دفعه <code>ملغي (VOIDED)</code> بقى مؤهّل للإلغاء</b> — لما تعديل الأوردر يشيل كل الأصناف (أو يودّي الإجمالي لصفر)، شوبيفاي بتلغي حجز الـ COD تلقائيًا فحالة الدفع بتبقى <code>ملغي</code> — <b>والأوردر نفسه لسه حي ومحتاج إلغاء</b>. ده بيحصل غالبًا في <code>Pending Edit</code> لما العميل يرفض التعديل: الحالة دي مسموح الإلغاء منها من v1.10.0، بس بوابة حالة الدفع كانت لسه بترفض — فالموظف بيروح يلغي من داشبورد شوبيفاي والإلغاء ده <b>مابيتسجّلش في سجل الأداة خالص</b>. المسموح دلوقتي: <code>غير مدفوع (PENDING)</code> · <code>ملغي (VOIDED)</code></span></li>
+            <li class="cl-item"><span class="cl-tag change">تغيير</span><span><b>مفيش أي خطر على الفلوس</b> — <code>VOIDED</code> معناها إن حجز الدفع <b>اتلغى</b>، مش اتحصّل، فمفيش مبلغ يترد. ولأن <code>VOIDED</code> هي كمان حالة الدفع بتاعة أي أوردر <b>اتلغى خلاص</b>، الأداة لسه بترفض أي أوردر ملغي فعلاً برسالة "الأوردر ملغي بالفعل" — الفرق بين الحالتين مبني على تاريخ الإلغاء نفسه مش على حالة الدفع</span></li>
+          </ul>
+        </div>
+
+        <div class="cl-version-block">
+          <div class="cl-version-row">
+            <span class="cl-ver-badge old">v1.11.0</span>
             <span class="cl-ver-date">08-09-2026</span>
           </div>
           <ul class="cl-items">
@@ -936,7 +947,7 @@ body {
             <h4>شروط الإلغاء — الخمسة لازم يتحققوا كلهم</h4>
             <ol>
               <li>حالة الأوردر S1 (manual_status) لازم تكون <code>New Order</code> أو <code>WhatsApp-CANCELLED</code> أو <code>Confirmed</code> أو <code>Pending Edit</code> أو <code>Ready</code> — <code>Pending Edit</code> اتضافت في Worker v2.10.0 (قرار أحمد 07-09-2026): الحالة معناها إن صنف طلع مش متوفر وقت التجهيز واتخصم من الأوردر وخدمة العملاء بتتابع العميل، فلو رفض التعديل يبقى الإلغاء هو النهاية الطبيعية للحالة. و<code>WhatsApp-CANCELLED</code> اتضافت في Worker v2.11.0 (قرار أحمد 08-09-2026): أتمتة الواتساب ألغت الأوردر مبدئيًا وخدمة العملاء بتتأكد من السبب قبل التثبيت، فالإلغاء اليدوي هو الخطوة اللي الحالة مستنياها</li>
-              <li>حالة الدفع (displayFinancialStatus) لازم تكون <code>PENDING</code> — غير مدفوع (لسه ملهوش تحصيل COD)</li>
+              <li>حالة الدفع (displayFinancialStatus) لازم تكون <code>PENDING</code> — غير مدفوع (لسه ملهوش تحصيل COD) — أو <code>VOIDED</code> — ملغي، وهي اتضافت في Worker v2.12.0 (قرار أحمد 10-09-2026): تعديل الأوردر اللي بيشيل كل الأصناف (أو بيودّي الإجمالي لصفر) بيخلّي شوبيفاي تعمل <b>void</b> للـ transaction بتاعة الـ COD تلقائيًا، فالأوردر بيفضل <b>حي ومحتاج إلغاء</b> وحالة دفعه <code>VOIDED</code>. مفيش خطر فلوس: <b>void</b> معناها الحجز اتلغى مش اتحصّل. ⚠️ ولأن <code>VOIDED</code> هي كمان حالة الدفع بتاعة أوردر <b>اتلغى خلاص</b>، اللي بيفرّق بين الاتنين هو شرط رقم <b>٥</b> تحت (<code>cancelledAt</code>) — مش حالة الدفع</li>
               <li>حالة الشحن (displayFulfillmentStatus) لازم تكون <code>UNFULFILLED</code> — لم يتم الشحن. الشرط ده مضاف في Worker v2.3.0: حسب <code>ecommoda-order-lifecycle</code> قاعدة 2، إلغاء أوردر متشحن بيتصنّف <b>RTO</b> في كل تقارير الستاك مش إلغاء — رقم تاني تمامًا. وقاعدة 5 بتقول إن <code>Ready + Fulfilled</code> وضع شرعي (محاولة تسليم مُعادة)، يعني حالة S1 لوحدها ما كانتش بتمنع الحالة دي</li>
               <li>مفيش أي طلب استرجاع/استبدال مفتوح على الأوردر — ده مستحيل عمليًا في المراحل دي أصلًا (S2 بيتفعّل بس بعد Delivered)، وشوبيفاي نفسها بترفض الإلغاء لو فيه return شغّال</li>
               <li>مفيش الأوردر ملغي بالفعل</li>
@@ -1011,10 +1022,11 @@ body {
               <li><code>currentEmployee</code> — { username, displayName } في الذاكرة فقط</li>
               <li><code>WORKER_URL</code> · <code>ADMIN_WORKER_URL</code> — ثوابت في §CONFIG (مش إعدادات ولا localStorage) — Standards #28</li>
               <li><code>LS_SECRET = 'order_cancel_worker_secret'</code> — المفتاح الوحيد في localStorage</li>
-              <li><code>MIN_WORKER_VERSION = '2.11.0'</code> — أقل نسخة Worker الصفحة بتشتغل معاها (الصفحة بتوصف <code>WhatsApp-CANCELLED</code> كحالة مسموح الإلغاء منها، وده من Worker v2.11.0؛ وقبلها <code>Pending Edit</code> من v2.10.0 و<code>get_log_reasons</code> وباراميتر <code>reasons</code> من v2.8.0). <b>مالهاش علاقة بـ <code>TOOL_VERSION</code></b> — أي endpoint جديد الصفحة تعتمد عليه لازم يرفعها في نفس التسليم</li>
+              <li><code>MIN_WORKER_VERSION = '2.12.0'</code> — أقل نسخة Worker الصفحة بتشتغل معاها (الصفحة بتوصف حالة الدفع <code>VOIDED</code> كحالة مسموح الإلغاء منها، وده من Worker v2.12.0؛ وقبلها <code>WhatsApp-CANCELLED</code> من v2.11.0 و<code>Pending Edit</code> من v2.10.0 و<code>get_log_reasons</code> وباراميتر <code>reasons</code> من v2.8.0). <b>مالهاش علاقة بـ <code>TOOL_VERSION</code></b> — أي endpoint جديد الصفحة تعتمد عليه لازم يرفعها في نفس التسليم</li>
               <li><code>currentOrder</code> — بيانات آخر أوردر اتبحث عنه. <b>بيفضل موجود طول ما إنت في خطوة النتيجة</b> (زرار "تحقق من شوبيفاي الآن" بيحتاجه)، وبيتصفّر في <code>resetToSearch()</code> — يعني عند الضغط على "إلغاء أوردر آخر؟" أو عند الـ logout</li>
               <li><code>liveCancelReasons</code> — قائمة الأسباب اللي جاية من lookup_order، بتتغيّر كل بحث</li>
               <li><code>liveAllowedS1</code> — حالات S1 المسموح الإلغاء منها زي ما الـ Worker بعتها (<code>allowedManualStatuses</code>). بتستخدم في <b>نص سبب الرفض</b> بس عشان الرسالة ما تقولش قايمة والـ Worker بيطبّق غيرها — الحكم نفسه من <code>canCancelByManualStatus</code></li>
+              <li><code>liveAllowedFin</code> — نفس الفكرة بالظبط لحالات الدفع (<code>allowedFinancialStatuses</code> من الـ Worker). الحكم من <code>canCancelByFinancialStatus</code>، والقايمة للرسالة بس</li>
               <li><code>WAREHOUSE_ACK_STATUSES = ['Confirmed','Pending Edit','Ready']</code> — الحالات اللي بتطلب إقرار الإبلاغ. <code>New Order</code> و<code>WhatsApp-CANCELLED</code> مؤهّلين للإلغاء و<b>برّه القايمة دي عن قصد</b> — الأوردر فيهم ما وصلش المخزن أصلاً، وطلب إقرار على حالة مالهاش مخزن بيعلّم الموظف يدوس من غير ما يقرا</li>
               <li><code>FINANCIAL_STATUS_AR</code> · <code>FULFILLMENT_STATUS_AR</code> — ترجمة حالات شوبيفاي، نسخة احتياطية لو الـ Worker أقدم من v2.3.0</li>
               <li><code>msState</code> — حالة فلاتر السجل (<code>emp</code> · <code>type</code> · <code>reason</code>): العناصر + المختار + بحث القائمة. عناصر <code>emp</code> و<code>reason</code> بتتحمّل من الـ Worker — ممنوع أي قيمة hardcoded فيهم</li>
@@ -1135,13 +1147,13 @@ body {
 // ══════════════════════════════════════════════════════════════
 // §CONFIG
 // ══════════════════════════════════════════════════════════════
-const TOOL_VERSION = 'v1.11.0';
+const TOOL_VERSION = 'v1.12.0';
 
 // أقل نسخة Worker الواجهة دي بتشتغل معاها. الصفحة معتمدة على
 // get_logs_count / get_logs_export (اتضافوا في Worker v2.5.0) — فده الحد الأدنى.
 // ⚠️ صيانة: أي endpoint جديد الصفحة تعتمد عليه → ارفع الرقم ده في نفس التسليم.
 // ⚠️ مالهاش أي علاقة بـ TOOL_VERSION — دي بتوصف أقل Worker مقبول، مش الصفحة.
-const MIN_WORKER_VERSION = '2.11.0';
+const MIN_WORKER_VERSION = '2.12.0';
 
 // الرابطين ثوابت مش أسرار ومش حقول إعدادات — html-builder Standards Changelog #28.
 // WORKER_URL من CLAUDE.md بتاع الريبو · ADMIN_WORKER_URL من ecommoda-constants §5b.
@@ -1585,6 +1597,10 @@ let liveCancelReasons = [];
 // للحقيقة). الواجهة بتستخدمها في نص سبب الرفض بس؛ الحكم نفسه من الـ Worker
 // (canCancelByManualStatus)، فالقايمة دي عمرها ما بتوسّع صلاحية.
 let liveAllowedS1 = [];
+// حالات الدفع المسموح الإلغاء منها — نفس منطق liveAllowedS1 بالظبط: بتيجي من
+// الـ Worker (allowedFinancialStatuses) وبتستخدم في نص سبب الرفض بس، والحكم
+// نفسه من canCancelByFinancialStatus. القايمة دي عمرها ما بتوسّع صلاحية.
+let liveAllowedFin = [];
 let selectedReason = '';
 
 // ترجمة حالات شوبيفاي — نسخة احتياطية لو الـ Worker أقدم من v2.3.0 وما بعتش
@@ -1624,6 +1640,7 @@ async function lookupOrder() {
     currentOrder = data.order;
     liveCancelReasons = data.cancelReasons || [];
     liveAllowedS1 = Array.isArray(data.allowedManualStatuses) ? data.allowedManualStatuses : [];
+    liveAllowedFin = Array.isArray(data.allowedFinancialStatuses) ? data.allowedFinancialStatuses : [];
     renderOrderCard(data.order, liveCancelReasons);
   } catch (err) {
     area.innerHTML = `<div class="empty-state">❌ ${err.message}</div>`;
@@ -1657,7 +1674,12 @@ function renderOrderCard(order, reasons) {
   // الـ Worker ده بيطبّقها فعلاً — مش اللي المفروض يطبّقها.
   const allowedS1 = liveAllowedS1.length ? liveAllowedS1 : ['New Order', 'Confirmed', 'Ready'];
   if (!order.canCancelByManualStatus) failReasons.push(`حالة الأوردر S1 الحالية "${order.manualStatus || 'فارغة'}" — المسموح: ${allowedS1.join(' / ')}`);
-  if (!order.canCancelByFinancialStatus) failReasons.push(`حالة الدفع "${finLabel}" — المسموح: غير مدفوع (PENDING) فقط`);
+  // نفس قاعدة liveAllowedS1: القايمة من الـ Worker، والـ fallback بيوصف الشرط
+  // القديم اللي الـ Worker الأقدم بيطبّقه فعلاً — مش اللي المفروض يطبّقه.
+  const allowedFin = liveAllowedFin.length ? liveAllowedFin : ['PENDING'];
+  const allowedFinText = allowedFin
+    .map(st => `${FINANCIAL_STATUS_AR[st] || st} (${st})`).join(' / ');
+  if (!order.canCancelByFinancialStatus) failReasons.push(`حالة الدفع "${finLabel}" — المسموح: ${allowedFinText}`);
   if (!fulfillmentOk) failReasons.push(`حالة الشحن "${fulLabel}" — المسموح: لم يتم الشحن (UNFULFILLED) فقط. الأوردر اللي اتشحن فعلاً إلغاؤه بيتسجّل RTO مش إلغاء`);
   if (order.hasOpenReturn) failReasons.push('يوجد طلب استرجاع/استبدال مفتوح على الأوردر');
 
@@ -1899,6 +1921,7 @@ function resetToSearch() {
   currentOrder = null;
   liveCancelReasons = [];
   liveAllowedS1 = [];
+  liveAllowedFin = [];
   selectedReason = '';
   document.getElementById('resultStepBody').innerHTML = '';
   document.getElementById('resultStepOrder').innerHTML = '';
