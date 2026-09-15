@@ -1,9 +1,28 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.12.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// TOOL_VERSION: v2.13.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
 // skills: worker-builder v2.0.0 · html-builder v6.0.0 · constants v1.4.3 ·
 //         shopify-graphql-helper v1.0.0 · order-lifecycle v1.2.0 — 01-09-2026
 ////
+// CHANGELOG v2.13.0:
+//   🟡 [تغيير] `WhatsApp-Confirmed` بقت حالة S1 **مسموح الإلغاء منها** — قرار
+//       أحمد 15-09-2026. `ALLOWED_MANUAL_STATUS` بقت
+//       `New Order · WhatsApp-Confirmed · WhatsApp-CANCELLED · Confirmed ·
+//       Pending Edit · Ready`.
+//       السبب: الحالة دي (order-lifecycle §الحالات بند ٣) معناها إن **أتمتة
+//       الواتساب** أكّدت الأوردر مبدئيًا، وخدمة العملاء لازم تراجع العنوان
+//       والتليفون قبل ما تحوّلها لـ `Confirmed` — لسه مش تأكيد نهائي. الانتقال
+//       `WhatsApp-Confirmed → Cancelled` كان **شرعي أصلاً** في
+//       `CAN_TRANSITION_TO_CANCELLED` (order-lifecycle §جدول الانتقالات:
+//       `WhatsApp-Confirmed` → `Confirmed` · `Cancelled`)، فالرفض كان في بوابة
+//       الأداة بس مش في دورة حياة الأوردر — نفس فجوة "أوردر ملغي ≠ اتلغى بالأداة
+//       دي" الموثّقة في CLAUDE.md كانت بتتكرر مع الحالة دي كمان.
+//   ⚪ [قرار] الحالة **ما اتضافتش** لـ `WAREHOUSE_ACK_STATUSES` — نفس معاملة
+//       `WhatsApp-CANCELLED`. الأوردر في `WhatsApp-Confirmed` **لسه ما اتأكدش
+//       أصلاً** (بتيجي قبل `Confirmed`)، يعني ما اتطبعش وما اتجهّزش وما وصلش
+//       للمخزن — فمفيش حد يتبلّغ. أي تغيير في القرار ده لازم يبقى صريح ومكتوب،
+//       مش تعديل صامت.
+//
 // CHANGELOG v2.12.0:
 //   🟡 [تغيير] `VOIDED` بقت حالة دفع **مسموح الإلغاء منها** — قرار أحمد
 //       10-09-2026. `ALLOWED_FINANCIAL_STATUS` بقت `PENDING · VOIDED`.
@@ -243,9 +262,10 @@
 //   🟡 [جديد] shippingAddress بقت بترجع مع الأوردر (اسم/عنوان/مدينة/محافظة/
 //       كود بريدي/دولة/تليفون) — عشان واجهة الأداة تقدر تعرض تفاصيل العنوان.
 //
-// ⚠️ manual_status المسموح: New Order/WhatsApp-CANCELLED/Confirmed/Pending Edit/Ready
-//     — `Pending Edit` اتضافت في v2.10.0 و`WhatsApp-CANCELLED` في v2.11.0
-//     (قرارات أحمد 07 و08-09-2026)، والباقي زي ما كان.
+// ⚠️ manual_status المسموح: New Order/WhatsApp-Confirmed/WhatsApp-CANCELLED/
+//     Confirmed/Pending Edit/Ready — `Pending Edit` اتضافت في v2.10.0،
+//     `WhatsApp-CANCELLED` في v2.11.0، و`WhatsApp-Confirmed` في v2.13.0
+//     (قرارات أحمد 07 و08 و15-09-2026)، والباقي زي ما كان.
 // ⚠️ سبب الإلغاء المرفوع لشوبيفاي ثابت OTHER دايمًا — شوف v2.2.0 فوق.
 // ══════════════════════════════════════════════════════
 
@@ -253,7 +273,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.12.0";
+const WORKER_VERSION = "2.13.0";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -270,8 +290,13 @@ const ALLOWED_ORIGINS = [
 // اليدوي هو الخطوة اللي الحالة مستنياها، وانتقالها لـ Cancelled شرعي كمان.
 // ⚠️ الاسم بحروفه: `WhatsApp-CANCELLED` كابيتال بالكامل بعد الشرطة
 // (order-lifecycle Step 2 — حرف واحد غلط = الحالة مش هتتطابق وهي موجودة).
+// `WhatsApp-Confirmed` مسموحة من v2.13.0 (قرار أحمد 15-09-2026): أتمتة الواتساب
+// أكّدت الأوردر مبدئيًا بس خدمة العملاء لسه لازم تراجع العنوان والتليفون قبل
+// التحويل لـ Confirmed — وانتقالها لـ Cancelled شرعي أصلاً في دورة حياة الأوردر.
+// ⚠️ الاسم بحروفه: `WhatsApp-Confirmed` — كابيتال أول حرف بس بعد الشرطة، عكس
+// `WhatsApp-CANCELLED` اللي فوقها (كابيتال بالكامل).
 const ALLOWED_MANUAL_STATUS = new Set([
-  "New Order", "WhatsApp-CANCELLED", "Confirmed", "Pending Edit", "Ready",
+  "New Order", "WhatsApp-Confirmed", "WhatsApp-CANCELLED", "Confirmed", "Pending Edit", "Ready",
 ]);
 // حالات الدفع المسموح الإلغاء منها.
 // `PENDING` = الحالة الطبيعية لأوردر COD لسه ملهوش تحصيل.
@@ -303,6 +328,8 @@ const ALLOWED_FULFILLMENT_STATUS = new Set(["UNFULFILLED"]);
 // ما اتأكدش (بتيجي من New Order قبل Confirmed) فما اتطبعش وما اتجهّز وما وصلش
 // للمخزن — مفيش حد يتبلّغ. طلب إقرار على حالة مالهاش مخزن بيعلّم الموظف يدوس
 // على الـ checkbox من غير ما يقرا، فيضيع معناه في الحالات اللي محتاجاه فعلاً.
+// ⚠️ و`WhatsApp-Confirmed` **برّه القايمة كمان عن قصد** (v2.13.0) — نفس السبب
+// بالحرف: الحالة دي كمان بتيجي قبل Confirmed، فالأوردر ما وصلش المخزن.
 const WAREHOUSE_ACK_STATUSES = new Set(["Confirmed", "Pending Edit", "Ready"]);
 
 // الحالات المسموحة بالعربي — الواجهة بتعرضها في الـ chips وفي أسباب الرفض
