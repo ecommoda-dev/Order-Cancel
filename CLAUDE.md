@@ -95,18 +95,22 @@ Production branch : main · Builds for non-production branches: مفعّلة
 Deploy command    : npx wrangler deploy · Version: npx wrangler versions upload
 ```
 
-⚠️ **Worker `v2.13.0` / الواجهة `v1.13.0` (15-09-2026) لسه مش متأكَّدين من النسخة
-المنشورة** — التحديث ده اتكتب وقت الدمج، والتأكيد بقراءة الـ bundle عبر MCP لسه
-ما اتعملش. أول مراجعة جاية تقرا `WORKER_VERSION` من الكود المنشور وتقفل السطر ده.
-
-**النسخة المنشورة المتأكَّدة آخر مرة:** Worker `v2.12.0` (من دمج PR #11)
+**النسخة المنشورة وقت آخر تحديث للملف ده:** Worker `v2.13.0` (من دمج PR #13)
+— **متأكَّدة بقراءة الكود المنشور نفسه عبر MCP** يوم 15-09-2026، مش من الداشبورد
+بالعين: `WORKER_VERSION = "2.13.0"` و
+`ALLOWED_MANUAL_STATUS = ["New Order","WhatsApp-Confirmed","WhatsApp-CANCELLED","Confirmed","Pending Edit","Ready"]`
+و`CAN_TRANSITION_TO_CANCELLED` شايلة `WhatsApp-Confirmed` أصلاً كلهم في الـ bundle
+المنشور. واتأكد كمان إن اللي المفروض **ما اتغيّرش** فعلاً ما اتغيّرش:
+`WAREHOUSE_ACK_STATUSES = ["Confirmed","Pending Edit","Ready"]` (من غير
+`WhatsApp-Confirmed` — القرار المقصود) وفحص `alreadyCancelled` في
+`handleCancelOrder` كلهم زي ما هم.
+قبلها كانت Worker `v2.12.0` (من دمج PR #11)
 — **متأكَّدة بقراءة الكود المنشور نفسه عبر MCP** يوم 10-09-2026، مش من الداشبورد
 بالعين: `WORKER_VERSION = "2.12.0"` و
 `ALLOWED_FINANCIAL_STATUS = ["PENDING","VOIDED"]` ودالة `allowedFinancialStatusText()`
 كلهم في الـ bundle المنشور. واتأكد كمان إن اللي المفروض **ما اتغيّرش** فعلاً ما
-اتغيّرش: `ALLOWED_FULFILLMENT_STATUS = ["UNFULFILLED"]` و
-`WAREHOUSE_ACK_STATUSES = ["Confirmed","Pending Edit","Ready"]` وفحص
-`alreadyCancelled` في `handleCancelOrder` كلهم زي ما هم.
+اتغيّرش: `ALLOWED_FULFILLMENT_STATUS = ["UNFULFILLED"]` وفحص `alreadyCancelled`
+في `handleCancelOrder` كلهم زي ما هم.
 قبلها كانت Worker `v2.11.0` (من دمج PR #9)
 — **متأكَّدة بقراءة الكود المنشور نفسه عبر MCP** يوم 08-09-2026، مش من الداشبورد
 بالعين: `WORKER_VERSION = "2.11.0"` و
