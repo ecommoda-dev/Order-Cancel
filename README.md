@@ -2,7 +2,7 @@
 
 # 🚫 إلغاء الأوردرات يدويًا — EcomModa
 
-![version](https://img.shields.io/badge/version-v1.12.0-blue)
+![version](https://img.shields.io/badge/version-v1.13.0-blue)
 
 أداة داخلية بتخلّي فريق خدمة العملاء يلغي أوردر **قبل الشحن** من غير الدخول على
 داشبورد شوبيفاي — مع فرض الشروط اللي بتمنع الإلغاء في الحالة أو الوقت الغلط.
@@ -16,8 +16,8 @@
 
 ## شروط الإلغاء — الخمسة لازم يتحققوا كلهم
 
-1. `custom.manual_status` (حالة الأوردر S1) = `New Order` أو `WhatsApp-CANCELLED` أو `Confirmed`
-   أو `Pending Edit` أو `Ready`
+1. `custom.manual_status` (حالة الأوردر S1) = `New Order` أو `WhatsApp-Confirmed` أو
+   `WhatsApp-CANCELLED` أو `Confirmed` أو `Pending Edit` أو `Ready`
 2. حالة الدفع (`displayFinancialStatus`) = `PENDING` — غير مدفوع (لسه مفيش تحصيل COD)
    أو `VOIDED` — ملغي (حجز الـ COD اتلغى، والأوردر لسه حي)
 3. حالة الشحن (`displayFulfillmentStatus`) = `UNFULFILLED` — لم يتم الشحن
@@ -34,6 +34,14 @@
 > 🔴 **و`VOIDED` هي كمان حالة الدفع بتاعة أوردر اتلغى خلاص** (`PENDING → VOIDED`
 > بعد أي إلغاء) — يعني اللي بيفرّق بين الاتنين بقى **الشرط ٥ لوحده**
 > (`cancelledAt`). ممنوع يتشال أو يتخفّف.
+>
+> `WhatsApp-Confirmed` اتضافت للشرط ١ في Worker v2.13.0 (قرار أحمد 15-09-2026).
+> الحالة معناها إن **أتمتة الواتساب** أكّدت الأوردر مبدئيًا، بس خدمة العملاء لسه
+> لازم تراجع **العنوان والتليفون كاملين** قبل ما تحوّلها لـ `Confirmed` نهائيًا.
+> الانتقال `WhatsApp-Confirmed → Cancelled` شرعي أصلاً في
+> `ecommoda-order-lifecycle`، ونفس فجوة الـ D1 اللي تحت كانت بتتكرر معاها.
+> ⚠️ الاسم بحروفه: `WhatsApp-Confirmed` — كابيتال أول حرف بس بعد الشرطة، عكس
+> `WhatsApp-CANCELLED` (كابيتال بالكامل).
 >
 > `WhatsApp-CANCELLED` اتضافت للشرط ١ في Worker v2.11.0 (قرار أحمد 08-09-2026).
 > الحالة معناها إن **أتمتة الواتساب** ألغت الأوردر مبدئيًا وخدمة العملاء بتكلّم
@@ -59,8 +67,8 @@
 بيفضل مقفول من غير الإقرار. الـ Worker بيرفض الطلب كمان لو الإقرار ناقص، والقيمة
 بتتسجّل في `extra.warehouseNotified` في D1. `Pending Edit` جوّه القايمة دي لأن
 الحالة **مصدرها المخزن** وقت التجهيز والأوردر متحجوز فيه فعلاً.
-`New Order` و`WhatsApp-CANCELLED` **برّه القايمة عن قصد** — الأوردر فيهم لسه
-ما اتأكدش وما وصلش المخزن، فمفيش حد يتبلّغ.
+`New Order` و`WhatsApp-Confirmed` و`WhatsApp-CANCELLED` **برّه القايمة عن قصد**
+— الأوردر فيهم لسه ما اتأكدش وما وصلش المخزن، فمفيش حد يتبلّغ.
 
 ## إزاي بتشتغل
 
@@ -128,8 +136,8 @@
 ## الملفات
 
 ```
-index.js        Worker v2.12.0 — Cloudflare Workers + D1 + Shopify Admin GraphQL
-index.html      الواجهة v1.12.0 — صفحة واحدة على GitHub Pages
+index.js        Worker v2.13.0 — Cloudflare Workers + D1 + Shopify Admin GraphQL
+index.html      الواجهة v1.13.0 — صفحة واحدة على GitHub Pages
 wrangler.toml   اسم الـ Worker + D1 binding + SHOP_DOMAIN
 CLAUDE.md       قواعد الأداة وفخاخها والمسائل المفتوحة
 SKILL-FIXES.md  إصلاحات مطلوبة في المهارات، مستخرَجة من شغل الأداة دي
@@ -151,6 +159,6 @@ SKILL-FIXES.md  إصلاحات مطلوبة في المهارات، مستخرَ
 لو اتضاف ملف جديد الـ Worker بيعتمد عليه، **لازم يتضاف للقائمة** وإلا
 الـ Worker يتجمّد على نسخته القديمة بلا أي رسالة.
 
-آخر تحديث: 10-09-2026 — حالة الدفع `VOIDED` بقت مؤهّلة للإلغاء (Worker v2.12.0 · الواجهة v1.12.0)
+آخر تحديث: 15-09-2026 — `WhatsApp-Confirmed` بقت حالة مؤهّلة للإلغاء (Worker v2.13.0 · الواجهة v1.13.0)
 
 </div>
