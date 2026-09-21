@@ -1,0 +1,31 @@
+{
+  "tool": "order_cancel",
+  "since": null,
+  "types": {
+    "login": {
+      "result": null,
+      "stage": null,
+      "desc": "دخول موظف"
+    },
+    "logout": {
+      "result": null,
+      "stage": null,
+      "desc": "خروج موظف"
+    },
+    "cancel": {
+      "result": null,
+      "stage": null,
+      "desc": "إلغاء الأوردر على شوبيفاي"
+    },
+    "cancel_failed": {
+      "result": "error",
+      "stage": null,
+      "desc": "نداء إلغاء الأوردر فشل"
+    },
+    "update": {
+      "result": null,
+      "stage": null,
+      "desc": "تحديث custom.manual_status بعد الإلغاء"
+    }
+  }
+}
