@@ -375,11 +375,6 @@ if (order.cancelledAt) {
 
 ---
 
-## مصادر الأدلة
-
-| البند | المصدر |
-|---|---|
-| ١ · التوقيت بالثانية | D1 (`tool = order_cancel`, 01-09-2026) + شوبيفاي `#53033` |
 ## ٧. ⚪ `ecommoda-html-builder` — قاعدة الثيم بتسمّي استثناء واحد وبقوا اتنين
 
 **المكان:** `SKILL.md` قاعدة ٢٥ (Step 2) · `references/design-system.md` (قسم
@@ -428,6 +423,11 @@ if (order.cancelledAt) {
 
 ---
 
+## مصادر الأدلة
+
+| البند | المصدر |
+|---|---|
+| ١ · التوقيت بالثانية | D1 (`tool = order_cancel`, 01-09-2026) + شوبيفاي `#53033` |
 | ٢ · سقف التصدير | كود `Order-Cancel` — `LOG_EXPORT_MAX` واتجرّب في متصفح فعلي بـ 3,500 صف |
 | ٣ · التعارض | `data-table-standard.md` بند ٢١ مقابل `shared-functions.md` |
 | ٤ · `cancel_failed` | `grep` على كل `writeLog(` في `index.js` |
