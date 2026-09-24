@@ -23,9 +23,10 @@
       "desc": "نداء إلغاء الأوردر فشل"
     },
     "update": {
+      "tool": "metafields_change",
       "result": null,
       "stage": null,
-      "desc": "تحديث custom.manual_status بعد الإلغاء"
+      "desc": "تحديث custom.manual_status بعد الإلغاء — بيتكتب تحت السجل المشترك metafields_change مش تحت order_cancel"
     }
   }
 }
