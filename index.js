@@ -1,9 +1,26 @@
 // ══════════════════════════════════════════════════════
 // EcomModa — Order Cancel Tool Worker
-// TOOL_VERSION: v2.13.0  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
-// skills: worker-builder v2.0.0 · html-builder v6.0.0 · constants v1.4.3 ·
-//         shopify-graphql-helper v1.0.0 · order-lifecycle v1.2.0 — 01-09-2026
+// TOOL_VERSION: v2.13.1  (كان v2.0.0 مسوّدة · المنشور على كلاودفلير كان v1.0.3)
+// skills: worker-builder v3.8.0 · html-builder v6.0.0 · constants v3.1.0 ·
+//         shopify-graphql-helper v1.0.0 · order-lifecycle v1.2.0 — 24-09-2026
 ////
+// CHANGELOG v2.13.1:
+//   🟢 [مراقبة] استبدال `check-log-values.mjs` بالنسخة المصلَّحة (v3.1) —
+//       بتمسك object shorthand (`{ tool, type }`) و`['type']:` محسوب و
+//       `const type = …` محلي، مش بس `type:` بنقطتين. الفحص على الكود
+//       الحالي رجّع نضيف: الخمس قيم (`login`/`logout`/`cancel`/`cancel_failed`/
+//       `update`) كلها بمفتاح `type:` صريح أصلاً — صفر shorthand، صفر قيم
+//       ديناميكية. `log-values.json` اتحدّث بحقل `tool: "metafields_change"`
+//       على `update` (كانت بتتكتب تحته فعليًا زي ما موثّق في CLAUDE.md، بس
+//       من غير الحقل — تصحيح توثيقي بلا أثر على الفحص).
+//   🟢 [مراقبة] تنفيذ الطبقة ٥ — الحارس الديناميكي وقت التشغيل
+//       (`ecommoda-worker-builder` Step 7-ج): `LOG_REGISTRY` (§LOG-REG) +
+//       `noteUnregisteredLogValues` + UPSERT في `log_value_alerts`
+//       (الجدول مشترك، مفيش CREATE) داخل `writeLog` نفسها. مفيش رفض كتابة
+//       أبدًا — قيمة غير مسجّلة بتتكتب عادي + `extra._unregistered = true`.
+//       الأداة عندها Anchor واحد بس (`writeLog` — لا `writeLogsBatch` ولا
+//       أنكور تاني في الملف)، فالحارس اتحط فيه بس.
+//
 // CHANGELOG v2.13.0:
 //   🟡 [تغيير] `WhatsApp-Confirmed` بقت حالة S1 **مسموح الإلغاء منها** — قرار
 //       أحمد 15-09-2026. `ALLOWED_MANUAL_STATUS` بقت
@@ -273,7 +290,7 @@
 // §CONSTANTS
 // ══════════════════════════════════════════════════════
 const TOOL_NAME = "order_cancel";
-const WORKER_VERSION = "2.13.0";
+const WORKER_VERSION = "2.13.1";
 const API_VERSION = "2026-01";
 
 const ALLOWED_ORIGINS = [
@@ -445,6 +462,60 @@ function assertEnv(env, ...groups) {
 }
 
 // ══════════════════════════════════════════════════════
+// §LOG-REG — الحارس الديناميكي لقيم اللوج (الطبقة ٥)
+// ══════════════════════════════════════════════════════
+// قطعة الأداة دي بس من log-values.json اللي جنبها — بتتحدّث معاه في نفس
+// الـ commit (ecommoda-worker-builder Step 7-ج). ممنوع شحن سجل الـ٣٢ أداة هنا.
+const LOG_REGISTRY = {
+  order_cancel:      new Set(["login", "logout", "cancel", "cancel_failed"]),
+  metafields_change: new Set(["update"]),
+};
+
+const isRegisteredLogValue = (tool, type) => !!LOG_REGISTRY[tool]?.has(type);
+
+// UPSERT على (source_tool, tool, type) — صف واحد لكل قيمة، hits بيعدّ.
+// الحدث الكامل مش بيضيع: الصف الأصلي موجود في logs وعليه _unregistered،
+// والجدول ده فهرس مش سجل تاني — عشان كده dedupe مش صف لكل حدث.
+const LOG_ALERT_SQL = `
+  INSERT INTO log_value_alerts
+    (source_tool, tool, type, first_seen, last_seen, hits,
+     worker_version, sample_order_name, sample_employee, sample_notes)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT(source_tool, tool, type) DO UPDATE SET
+    last_seen         = excluded.last_seen,
+    hits              = log_value_alerts.hits + excluded.hits,
+    worker_version    = excluded.worker_version,
+    sample_order_name = excluded.sample_order_name,
+    sample_employee   = excluded.sample_employee,
+    sample_notes      = excluded.sample_notes,
+    status            = CASE WHEN log_value_alerts.status = 'ignored'
+                             THEN 'ignored' ELSE 'open' END
+`;
+
+// فشل التنبيه ممنوع يأثر على أي حاجة — try/catch صامت. بتجمّع التكرار جوّه
+// نفس الدفعة في صف واحد (hits) قبل ما تكتب.
+async function noteUnregisteredLogValues(db, entries) {
+  const byPair = new Map();
+  for (const e of entries) {
+    const key = `${e.tool}\u0000${e.type}`;
+    const acc = byPair.get(key);
+    if (acc) { acc.hits++; continue; }
+    byPair.set(key, { entry: e, hits: 1 });
+  }
+  const now = new Date().toISOString();
+  for (const { entry, hits } of byPair.values()) {
+    try {
+      await db.prepare(LOG_ALERT_SQL).bind(
+        TOOL_NAME, entry.tool ?? "(بدون tool)", entry.type ?? "(بدون type)",
+        now, now, hits, WORKER_VERSION ?? null,
+        entry.orderName ?? null, entry.employee ?? null,
+        entry.notes ? String(entry.notes).slice(0, 200) : null,
+      ).run();
+    } catch (e) { /* متعمّد: التنبيه فهرس، وفشله أهون من تعطيل الأداة */ }
+  }
+}
+
+// ══════════════════════════════════════════════════════
 // §SHARED — copy verbatim — never modify
 // ══════════════════════════════════════════════════════
 async function verifyEmployee(db, username, pin) {
@@ -478,6 +549,14 @@ async function registerPin(db, username, pin) {
 }
 
 async function writeLog(db, entry) {
+  // الطبقة ٥ (Step 7-ج) — قيمة (tool, type) مش مسجّلة في LOG_REGISTRY
+  // ما بترفضش الكتابة أبدًا: الصف بيتكتب عادي + extra._unregistered = true،
+  // والتنبيه بيتبعت **بعد** الكتابة جوّه try/catch صامت.
+  const unregistered = !isRegisteredLogValue(entry.tool, entry.type);
+  const extra = unregistered
+    ? { ...(entry.extra || {}), _unregistered: true }
+    : entry.extra;
+
   await db.prepare(`
     INSERT INTO logs
       (timestamp, tool, type, employee, order_id, order_name,
@@ -489,8 +568,10 @@ async function writeLog(db, entry) {
     entry.orderId ?? null, entry.orderName ?? null,
     entry.sku ?? null, entry.productTitle ?? null,
     entry.delta ?? null, entry.valueBefore ?? null, entry.valueAfter ?? null,
-    entry.notes ?? null, entry.extra ? JSON.stringify(entry.extra) : null
+    entry.notes ?? null, extra ? JSON.stringify(extra) : null
   ).run();
+
+  if (unregistered) await noteUnregisteredLogValues(db, [entry]);
 }
 
 const LOG_EXPORT_MAX = 2000;   // سقف التصدير — بيرجع للواجهة كـ `cap`

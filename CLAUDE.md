@@ -451,9 +451,9 @@ custom.manual_status     : "Cancelled" بعد 15 ثانية    ← مش من ا�
 
 | المهارة | الإصدار وقت آخر تعديل | كانت |
 |---|---|---|
-| ecommoda-worker-builder | v2.0.0 | v1.1.0 |
+| ecommoda-worker-builder | v3.8.0 | v2.0.0 |
 | ecommoda-html-builder | v6.0.0 | v4.0.0 |
-| ecommoda-constants | v1.4.3 | v1.4.2 |
+| ecommoda-constants | v3.1.0 | v1.4.3 |
 | shopify-graphql-helper | v1.0.0 | — |
 | ecommoda-order-lifecycle | v1.2.0 | v1.1.0 |
 
@@ -468,7 +468,16 @@ custom.manual_status     : "Cancelled" بعد 15 ثانية    ← مش من ا�
 فقاعدة «ممنوع إلغاء أوردر مدفوع» زي ما هي.
 وتعديل 15-09-2026 على `index.js` v2.13.0 و`index.html` v1.13.0 مالمسش قاعدة كمان
 — نفس شكل تعديلي 07 و08-09-2026 بالظبط: توسيع `ALLOWED_MANUAL_STATUS` بحالة
-انتقالها لـ `Cancelled` شرعي أصلاً في `CAN_TRANSITION_TO_CANCELLED`.)
+انتقالها لـ `Cancelled` شرعي أصلاً في `CAN_TRANSITION_TO_CANCELLED`.
+وتعديل 24-09-2026 على `index.js` v2.13.1 (الواجهة ما اتلمستش) — تعديل مراقبة
+بس، صفر منطق تشغيلي اتغيّر: (أ) `check-log-values.mjs` اتستبدل بالنسخة
+المصلَّحة v3.1 اللي بتمسك object shorthand و`['type']:` محسوب و`const type = …`
+محلي — التشغيل على الكود الحالي رجّع نضيف (صفر shorthand، صفر ديناميكي، الخمس
+قيم كلها بمفتاح `type:` صريح). (ب) تنفيذ الطبقة ٥ — الحارس الديناميكي وقت
+التشغيل (`ecommoda-worker-builder` Step 7-ج): `LOG_REGISTRY` + UPSERT في
+`log_value_alerts` (جدول مشترك، مفيش CREATE) جوّه `writeLog` — الأنكور
+الوحيد في الملف. البصمة اترفعت لـ`worker-builder v3.8.0`/`constants v3.1.0`
+لأنهم أول مرة يتقروا في الجلسة دي، مش لأن قاعدة اتخالفت قبل كده.)
 🔴 معلّقة: — لا شيء
 
 **البنود الكاسرة اللي اتقفلت في المطابقة دي:**
@@ -530,6 +539,10 @@ Worker v2.9.0 والواجهة v1.8.0. الجدول الكامل بالحالة 
 البناء اشتغل، والكود المنشور اتقرا عبر MCP وفيه `WORKER_VERSION = "2.8.0"`.
 **بند ٤ اتقفل بالكامل — الاختبارين السلبي والإيجابي الاتنين عدّوا.**
 
-آخر تحديث: 15-09-2026 — `WhatsApp-Confirmed` بقت حالة S1 مؤهّلة للإلغاء **بدون** إقرار إبلاغ المخزن (Worker v2.13.0 · الواجهة v1.13.0)
+آخر تحديث: 24-09-2026 — استبدال `check-log-values.mjs` بالنسخة المصلَّحة v3.1
++ تنفيذ الطبقة ٥ (الحارس الديناميكي لقيم اللوج، `ecommoda-worker-builder`
+Step 7-ج) داخل `writeLog` — مراقبة بس، صفر منطق تشغيلي اتغيّر (Worker v2.13.1)
+
+آخر تحديث سابق: 15-09-2026 — `WhatsApp-Confirmed` بقت حالة S1 مؤهّلة للإلغاء **بدون** إقرار إبلاغ المخزن (Worker v2.13.0 · الواجهة v1.13.0)
 
 </div>
